@@ -73,16 +73,16 @@
 <div id="log" class="log-window"></div>
 
 <script>
-// === Firebase接続設定（設定反映済み） ===
+// === 取得したFirebase設定を反映 ===
 const firebaseConfig = {
-  apiKey: "AIzaSyCFr2e2VVWPV8JIf9cIRUh94fLxGFpNR1w",
-  authDomain: "ethics-card-game-4598a.firebaseapp.com",
-  databaseURL: "https://ethics-card-game-4598a-default-rtdb.firebaseio.com",
-  projectId: "ethics-card-game-4598a",
-  storageBucket: "ethics-card-game-4598a.firebasestorage.app",
-  messagingSenderId: "1094270378260",
-  appId: "1:1094270378260:web:aef75b9c4108f2bd472201",
-  measurementId: "G-R8SYD17150"
+  apiKey: "AIzaSyDoxWVDvdSN425lMEDYpywmGqerifyKVZo",
+  authDomain: "ethics-card-game.firebaseapp.com",
+  databaseURL: "https://ethics-card-game-default-rtdb.firebaseio.com", // データベースURLを自動補完して追加しています
+  projectId: "ethics-card-game",
+  storageBucket: "ethics-card-game.firebasestorage.app",
+  messagingSenderId: "418543427549",
+  appId: "1:418543427549:web:5e2f2f044f834f22ab2034",
+  measurementId: "G-YY10V7YLJG"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -92,9 +92,9 @@ const CARD_DATABASE = [
   { id: "socrates", name: "ソクラテス", rank: "S", maxHp: 100, atk: 10, image: "images/socrates.jpg" },
   { id: "kant", name: "カント", rank: "S", maxHp: 100, atk: 10, image: "images/kant.jpg" },
   { id: "watsuji", name: "和辻哲郎", rank: "S", maxHp: 100, atk: 10, image: "images/watsuji.jpg" },
-  { id: "festinger", name: "フェスティンガー", rank: "C", maxHp: 40, atk: 4, image: "images/festinger.jpg" },[cite: 1]
-  { id: "erikson", name: "エリクソン", rank: "A", maxHp: 80, atk: 8, image: "images/erikson.jpg" },[cite: 1]
-  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", maxHp: 40, atk: 4, image: "images/heraclitus.jpg" }[cite: 1]
+  { id: "festinger", name: "フェスティンガー", rank: "C", maxHp: 40, atk: 4, image: "images/festinger.jpg" },
+  { id: "erikson", name: "エリクソン", rank: "A", maxHp: 80, atk: 8, image: "images/erikson.jpg" },
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", maxHp: 40, atk: 4, image: "images/heraclitus.jpg" }
 ];
 
 let myRole = "";
