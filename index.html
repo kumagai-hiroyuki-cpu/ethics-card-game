@@ -37,7 +37,7 @@
     button:disabled { background: #7f8c8d; }
     select { padding: 6px; font-size: 13px; border-radius: 4px; margin-bottom: 6px; }
 
-    .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 120px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
+    .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 130px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
 
     /* モーダル (カード拡大表示) */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
@@ -130,14 +130,14 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === テスト用 6人の思想家データ（パッシブスキル設定追加） ===
+// === テスト用 6人の思想家データ（アクティブ＆パッシブ定義） ===
 const CARD_DATABASE = [
-  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "無知の知", skillDesc: "相手に18ダメージ", passiveName: "無知の知", passiveDesc: "自身のATKが相手より低い時、被ダメージ半減", image: "images/socrates.jpg" },
-  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "定言命法", skillDesc: "相手に18ダメージ", passiveName: "永遠平和のために", passiveDesc: "自身の行動時、チーム全員のHPを10回復", image: "images/kant.jpg" },
-  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手に18ダメージ", passiveName: "間柄支配", passiveDesc: "自身はBランク以下のダメージ反射。他日本キャラはCランク反射", image: "images/watsuji.jpg" },
-  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10ダメージ", passiveName: "ストレス解消", passiveDesc: "自身の行動時、チーム全員のHPを5回復", image: "images/festinger.jpg" },
-  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14ダメージ", passiveName: "終わらない発達段階", passiveDesc: "ターン毎にATK上昇 (Sn=N(N+1)/2、最大21)", image: "images/erikson.jpg" },
-  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10ダメージ", passiveName: "万物の流転", passiveDesc: "ターン終了時に自身のHPを5回復", image: "images/heraclitus.jpg" }
+  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "問答法", skillDesc: "相手のATK-10、自分のATK+10", passiveName: "無知の知", passiveDesc: "自身のATKが相手より低い時、被ダメージ半減", image: "images/socrates.jpg" },
+  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "善意志の行為", skillDesc: "相手単体に40ダメージ", passiveName: "永遠平和のために", passiveDesc: "自身の行動時、チーム全員のHPを10回復", image: "images/kant.jpg" },
+  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手単体に18ダメージ", passiveName: "間柄支配", passiveDesc: "自身はBランク以下のダメージ反射。他日本キャラはCランク反射", image: "images/watsuji.jpg" },
+  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手のスキル発動を無効化する", passiveName: "ストレス解消", passiveDesc: "自身の行動時、チーム全員のHPを5回復", image: "images/festinger.jpg" },
+  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "発達段階巻き戻しビーム", skillDesc: "サイコロ(0〜5)の目だけ相手ATK低下", passiveName: "終わらない発達段階", passiveDesc: "ターン毎にATK上昇 (Sn=N(N+1)/2、最大21)", image: "images/erikson.jpg" },
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "母なる炎", skillDesc: "相手全体に5ダメージ", passiveName: "万物の流転", passiveDesc: "ターン終了時に自身のHPを5回復", image: "images/heraclitus.jpg" }
 ];
 
 let myRole = "";
@@ -238,7 +238,7 @@ function updateSelectOptions(myCards, enemyCards) {
   const currentTgtVal = tgtSelect.value;
 
   atkSelect.innerHTML = myCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp}/ATK:${c.atk})</option>`).join('');
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk})</option>`).join('');
   tgtSelect.innerHTML = enemyCards
     .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
 
@@ -286,9 +286,9 @@ function processBattlePhase() {
   applyTurnStartPassives(gameState.p1, gameState.turnCount);
   applyTurnStartPassives(gameState.p2, gameState.turnCount);
 
-  // 2. 行動処理
-  applyAction("P1", gameState.p1, gameState.p2, gameState.p1.cmd);
-  applyAction("P2", gameState.p2, gameState.p1, gameState.p2.cmd);
+  // 2. 行動処理（P1 ➔ P2 の順で適用）
+  applyAction("P1", gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
+  applyAction("P2", gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
 
   // 3. ターン終了時パッシブ処理 (ヘラクレイトスの自動回復)
   applyTurnEndPassives("P1", gameState.p1);
@@ -306,9 +306,8 @@ function processBattlePhase() {
 function applyTurnStartPassives(playerObj, turn) {
   playerObj.cards.forEach(c => {
     if (c.id === "erikson" && c.hp > 0) {
-      const n = turn;
-      const bonusAtk = (n * (n + 1)) / 2;
-      c.atk = Math.min(21, c.baseAtk + bonusAtk); // 最大21制限
+      const bonusAtk = (turn * (turn + 1)) / 2;
+      c.atk = Math.min(21, c.baseAtk + bonusAtk);
     }
   });
 }
@@ -323,52 +322,104 @@ function applyTurnEndPassives(pName, playerObj) {
   });
 }
 
-function applyAction(pName, actorObj, targetObj, cmd) {
+function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   const attacker = actorObj.cards[cmd.attacker];
   const target = targetObj.cards[cmd.target];
 
   if (attacker.hp <= 0) return;
 
-  const mult = getAttributeMultiplier(attacker.type, target.type);
-  let baseDamage = (cmd.type === 'attack') ? attacker.atk : 15;
-  let finalDamage = Math.floor(baseDamage * mult);
-  
-  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
-
-  // --- 被弾側パッシブ判定1：和辻哲郎「間柄支配」（反射） ---
-  let isReflected = false;
-  if (target.id === "watsuji" && (attacker.rank === "B" || attacker.rank === "C")) {
-    isReflected = true;
-  } else if (target.type === "日本" && target.id !== "watsuji" && attacker.rank === "C") {
-    // チームに和辻がいるか確認
-    const hasWatsuji = actorObj.cards.some(c => c.id === "watsuji" && c.hp > 0);
-    if (hasWatsuji) isReflected = true;
-  }
-
-  if (isReflected) {
-    attacker.hp = Math.max(0, attacker.hp - finalDamage);
-    log(`🌀 [${pName}] ${attacker.name} の攻撃！ しかし ${target.name} の「間柄支配」により ${finalDamage} ダメージが反射された！`);
-    if (attacker.hp === 0) log(`☠️ ${attacker.name} は自滅した！`);
-  } else {
-    // --- 被弾側パッシブ判定2：ソクラテス「無知の知」（ダメージ半減） ---
-    if (target.id === "socrates" && target.atk < attacker.atk) {
-      finalDamage = Math.floor(finalDamage / 2);
-      effText += " (無知の知でダメージ半減！)";
+  // --- 通常攻撃の場合 ---
+  if (cmd.type === 'attack') {
+    executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
+  } 
+  // --- スキル発動の場合 ---
+  else {
+    // フェスティンガー「認知的不協和」（スキル無効化チェック）
+    const oppAttacker = targetObj.cards[oppCmd.attacker];
+    if (oppCmd.type === 'skill' && oppAttacker.id === 'festinger' && oppAttacker.hp > 0) {
+      log(`🚫 [${pName}] ${attacker.name} のスキルはフェスティンガーの「認知的不協和」により無効化された！`);
+      return;
     }
 
-    target.hp = Math.max(0, target.hp - finalDamage);
-    const actName = cmd.type === 'attack' ? "攻撃" : `スキル「${attacker.skillName}」`;
-    log(`💥 [${pName}] ${attacker.name} の ${actName}！ ${target.name} に ${finalDamage} ダメージ！${effText}`);
-    if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
+    log(`🔥 [${pName}] ${attacker.name} のスキル「${attacker.skillName}」！`);
+
+    // 各思想家の固有アクティブスキル処理
+    switch (attacker.id) {
+      case "socrates": // 問答法
+        const stealAmt = Math.min(10, target.atk);
+        target.atk -= stealAmt;
+        attacker.atk += 10;
+        log(`✨ ${attacker.name} は ${target.name} から能力を10奪った！ (自分のATK:${attacker.atk} / 相手ATK:${target.atk})`);
+        break;
+
+      case "kant": // 善意志の行為 (40ダメージ)
+        executeDamage(pName, attacker, target, actorObj, targetObj, 40, true);
+        break;
+
+      case "watsuji": // 間柄的存在 (18ダメージ)
+        executeDamage(pName, attacker, target, actorObj, targetObj, 18, true);
+        break;
+
+      case "festinger": // 認知的不協和 (無効化成功ログ)
+        log(`✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！`);
+        break;
+
+      case "erikson": // 発達段階巻き戻しビーム (ダイス0〜5)
+        const dice = Math.floor(Math.random() * 6);
+        const reduced = Math.min(dice, target.atk);
+        target.atk -= reduced;
+        log(`🎲 サイコロの目は [${dice}]！ ${target.name} の攻撃力を ${reduced} 低下させた！(残ATK:${target.atk})`);
+        break;
+
+      case "heraclitus": // 母なる炎 (全体5ダメージ)
+        targetObj.cards.forEach(tCard => {
+          if (tCard.hp > 0) {
+            executeDamage(pName, attacker, tCard, actorObj, targetObj, 5, true);
+          }
+        });
+        break;
+    }
   }
 
-  // --- 行動側パッシブ判定：カント / フェスティンガー（味方全員回復） ---
+  // --- 行動時パッシブ判定：カント / フェスティンガー（味方全員回復） ---
   if (attacker.id === "kant") {
     actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 10); });
     log(`🌀 [${pName}] カントの「永遠平和のために」！ 味方全員のHPが 10 回復！`);
   } else if (attacker.id === "festinger") {
     actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 5); });
     log(`🌀 [${pName}] フェスティンガーの「ストレス解消」！ 味方全員のHPが 5 回復！`);
+  }
+}
+
+// ダメージ共通計算関数（反射・弱点・半減含む）
+function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
+  const mult = getAttributeMultiplier(attacker.type, target.type);
+  let finalDamage = Math.floor(baseDmg * mult);
+  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
+
+  // 和辻哲郎「間柄支配」（反射判定）
+  let isReflected = false;
+  if (target.id === "watsuji" && (attacker.rank === "B" || attacker.rank === "C")) {
+    isReflected = true;
+  } else if (target.type === "日本" && target.id !== "watsuji" && attacker.rank === "C") {
+    const hasWatsuji = targetObj.cards.some(c => c.id === "watsuji" && c.hp > 0);
+    if (hasWatsuji) isReflected = true;
+  }
+
+  if (isReflected) {
+    attacker.hp = Math.max(0, attacker.hp - finalDamage);
+    log(`🌀 ${target.name} の「間柄支配」！ ${finalDamage} ダメージが ${attacker.name} に反射された！`);
+    if (attacker.hp === 0) log(`☠️ ${attacker.name} は自滅した！`);
+  } else {
+    // ソクラテス「無知の知」（半減判定）
+    if (target.id === "socrates" && target.atk < attacker.atk) {
+      finalDamage = Math.floor(finalDamage / 2);
+      effText += " (無知の知でダメージ半減！)";
+    }
+
+    target.hp = Math.max(0, target.hp - finalDamage);
+    log(`💥 [${pName}] ${attacker.name} ➔ ${target.name} に ${finalDamage} ダメージ！${effText}`);
+    if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
   }
 }
 
