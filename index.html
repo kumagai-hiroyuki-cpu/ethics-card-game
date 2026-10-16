@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>倫理 思想家カードバトル (3vs3)</title>
   <style>
-    body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 10px; margin: 0; }
+    body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 10px; margin: 0; user-select: none; }
     h1 { text-align: center; color: #f39c12; margin: 10px 0; font-size: 1.4em; }
     
     .room-setup { background: #2c3e50; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
@@ -16,23 +16,36 @@
     .board-title { margin: 0 0 10px 0; font-size: 1em; display: flex; justify-content: space-between; }
     
     .card-list { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    .card-container { width: 30%; max-width: 150px; background: #333; border-radius: 6px; overflow: hidden; border: 2px solid #555; }
-    .card-container.defeated { opacity: 0.3; filter: grayscale(100%); }
+    .card-container { width: 30%; max-width: 140px; background: #333; border-radius: 6px; overflow: hidden; border: 2px solid #555; cursor: pointer; position: relative; transition: transform 0.1s; }
+    .card-container:active { transform: scale(0.95); }
+    .card-container.defeated { opacity: 0.3; filter: grayscale(100%); pointer-events: none; }
     
-    .card-image { width: 100%; height: 160px; object-fit: cover; display: block; background: #000; }
+    .card-image { width: 100%; height: 140px; object-fit: cover; display: block; background: #000; }
     .card-info { padding: 5px; background: rgba(0,0,0,0.8); }
-    .card-name { font-size: 0.8em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f1c40f; }
+    .card-name { font-size: 0.8em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f1c40f; text-align: center; }
     
-    .hp-bar { background: #555; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 4px; position: relative; }
+    .hp-bar { background: #555; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 4px; position: relative; }
     .hp-fill { background: #2ecc71; height: 100%; transition: width 0.3s; }
-    .hp-text { position: absolute; width: 100%; text-align: center; font-size: 8px; line-height: 10px; top: 0; left: 0; color: #fff; font-weight: bold; }
+    .hp-text { position: absolute; width: 100%; text-align: center; font-size: 9px; line-height: 12px; top: 0; left: 0; color: #fff; font-weight: bold; }
     
     .controls { background: #2c3e50; padding: 12px; border-radius: 8px; text-align: center; margin-top: 15px; max-width: 900px; margin-left: auto; margin-right: auto; }
+    .skill-box { background: #1a252f; border: 1px solid #1abc9c; border-radius: 6px; padding: 8px; margin: 8px 0; font-size: 0.85em; text-align: left; }
+    .skill-title { color: #f39c12; font-weight: bold; margin-bottom: 2px; }
+    .skill-desc { color: #ecf0f1; font-size: 0.8em; }
+
     button { background: #e67e22; color: #fff; border: none; padding: 8px 16px; font-size: 14px; border-radius: 4px; cursor: pointer; margin: 4px; font-weight: bold; }
     button:disabled { background: #7f8c8d; }
-    select { padding: 6px; font-size: 13px; border-radius: 4px; }
+    select { padding: 6px; font-size: 13px; border-radius: 4px; margin-bottom: 6px; }
 
     .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 100px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
+
+    /* モーダル (カード拡大表示) */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-card { background: #2c3e50; border: 2px solid #f1c40f; border-radius: 10px; width: 80%; max-width: 280px; padding: 15px; text-align: center; }
+    .modal-img { width: 100%; height: 200px; object-fit: cover; border-radius: 6px; }
+    .modal-title { font-size: 1.2em; color: #f1c40f; font-weight: bold; margin: 10px 0 5px 0; }
+    .modal-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e67e22; font-size: 0.8em; margin-bottom: 8px; font-weight: bold; }
+    .modal-detail { font-size: 0.85em; text-align: left; background: #1a252f; padding: 8px; border-radius: 6px; margin-top: 8px; }
   </style>
 
   <!-- Firebase SDK -->
@@ -64,37 +77,62 @@
 <div class="controls" id="action-area" style="display:none;">
   <div id="wait-msg" class="status-msg" style="font-size: 0.9em;">コマンドを選択してください</div>
   <div id="command-inputs">
-    思想家: <select id="attacker-select"></select> ➔ ターゲット: <select id="target-select"></select><br>
+    行動する思想家: <select id="attacker-select" onchange="updateSkillDisplay()"></select><br>
+    攻撃ターゲット: <select id="target-select"></select><br>
+    
+    <!-- スキル内容表示エリア -->
+    <div class="skill-box">
+      <div class="skill-title">✨ スキル: <span id="skill-name">-</span></div>
+      <div class="skill-desc" id="skill-desc">思想家を選択すると効果が表示されます</div>
+    </div>
+
     <button onclick="submitCommand('attack')">通常攻撃</button>
-    <button onclick="submitCommand('skill')">アクティブスキル</button>
+    <button onclick="submitCommand('skill')">スキル発動</button>
   </div>
 </div>
 
 <div id="log" class="log-window"></div>
 
+<!-- カード拡大モーダル -->
+<div class="modal-overlay" id="card-modal" onclick="closeModal()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <img id="modal-img" class="modal-img" src="">
+    <div id="modal-title" class="modal-title"></div>
+    <div>
+      <span id="modal-rank" class="modal-badge"></span>
+      <span id="modal-type" class="modal-badge" style="background:#3498db;"></span>
+    </div>
+    <div class="modal-detail">
+      <strong>【スキル】</strong><span id="modal-skill-name"></span><br>
+      <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
+    </div>
+    <button onclick="closeModal()" style="margin-top:12px;">閉じる</button>
+  </div>
+</div>
+
 <script>
-// === 取得したFirebase設定を反映 ===
+// === Firebase接続設定 ===
 const firebaseConfig = {
-  apiKey: "AIzaSyDoxWVDvdSN425lMEDYpywmGqerifyKVZo",
-  authDomain: "ethics-card-game.firebaseapp.com",
-  databaseURL: "https://ethics-card-game-default-rtdb.firebaseio.com", // データベースURLを自動補完して追加しています
-  projectId: "ethics-card-game",
-  storageBucket: "ethics-card-game.firebasestorage.app",
-  messagingSenderId: "418543427549",
-  appId: "1:418543427549:web:5e2f2f044f834f22ab2034",
-  measurementId: "G-YY10V7YLJG"
+  apiKey: "AIzaSyCFr2e2VVWPV8JIf9cIRUh94fLxGFpNR1w",
+  authDomain: "ethics-card-game-4598a.firebaseapp.com",
+  databaseURL: "https://ethics-card-game-4598a-default-rtdb.firebaseio.com",
+  projectId: "ethics-card-game-4598a",
+  storageBucket: "ethics-card-game-4598a.firebasestorage.app",
+  messagingSenderId: "1094270378260",
+  appId: "1:1094270378260:web:aef75b9c4108f2bd472201",
+  measurementId: "G-R8SYD17150"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === テスト用 6人の思想家データ ===
+// === テスト用 6人の思想家データ（属性・スキル追加） ===
 const CARD_DATABASE = [
-  { id: "socrates", name: "ソクラテス", rank: "S", maxHp: 100, atk: 10, image: "images/socrates.jpg" },
-  { id: "kant", name: "カント", rank: "S", maxHp: 100, atk: 10, image: "images/kant.jpg" },
-  { id: "watsuji", name: "和辻哲郎", rank: "S", maxHp: 100, atk: 10, image: "images/watsuji.jpg" },
-  { id: "festinger", name: "フェスティンガー", rank: "C", maxHp: 40, atk: 4, image: "images/festinger.jpg" },
-  { id: "erikson", name: "エリクソン", rank: "A", maxHp: 80, atk: 8, image: "images/erikson.jpg" },
-  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", maxHp: 40, atk: 4, image: "images/heraclitus.jpg" }
+  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "無知の知", skillDesc: "相手に18の固定ダメージを与える", image: "images/socrates.jpg" },
+  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "定言命法", skillDesc: "相手に18の固定ダメージを与える", image: "images/kant.jpg" },
+  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手に18の固定ダメージを与える", image: "images/watsuji.jpg" },
+  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10の固定ダメージを与える", image: "images/festinger.jpg" },[cite: 1]
+  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14の固定ダメージを与える", image: "images/erikson.jpg" },[cite: 1]
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10の固定ダメージを与える", image: "images/heraclitus.jpg" }[cite: 1]
 ];
 
 let myRole = "";
@@ -161,7 +199,7 @@ function updateGameUI() {
     document.getElementById("wait-msg").innerText = "⏳ 相手のコマンド決定を待っています...";
   } else {
     document.getElementById("command-inputs").style.display = "block";
-    document.getElementById("wait-msg").innerText = "⚔️ 3人の中から行動を選ぶ同時ターン！";
+    document.getElementById("wait-msg").innerText = "⚔️ コマンドを選択してください";
   }
 
   if (gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
@@ -170,13 +208,13 @@ function updateGameUI() {
 }
 
 function renderCards(containerId, cards) {
-  document.getElementById(containerId).innerHTML = cards.map(c => {
+  document.getElementById(containerId).innerHTML = cards.map((c, i) => {
     const hpPercent = Math.max(0, (c.hp / c.maxHp) * 100);
     return `
-      <div class="card-container ${c.hp === 0 ? 'defeated' : ''}">
-        <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/150x160?text=No+Image';">
+      <div class="card-container ${c.hp === 0 ? 'defeated' : ''}" onclick="openModal('${c.id}')">
+        <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image';">
         <div class="card-info">
-          <div class="card-name">[${c.rank}] ${c.name}</div>
+          <div class="card-name">${c.name}</div>
           <div class="hp-bar">
             <div class="hp-fill" style="width: ${hpPercent}%;"></div>
             <div class="hp-text">${c.hp}/${c.maxHp}</div>
@@ -187,12 +225,55 @@ function renderCards(containerId, cards) {
   }).join('');
 }
 
+function updateSelectOptions(myCards, enemyCards) {
+  const atkSelect = document.getElementById("attacker-select");
+  const tgtSelect = document.getElementById("target-select");
+  
+  const currentAtkVal = atkSelect.value;
+  const currentTgtVal = tgtSelect.value;
+
+  atkSelect.innerHTML = myCards
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
+  tgtSelect.innerHTML = enemyCards
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
+
+  if (currentAtkVal !== "") atkSelect.value = currentAtkVal;
+  if (currentTgtVal !== "") tgtSelect.value = currentTgtVal;
+
+  updateSkillDisplay();
+}
+
+function updateSkillDisplay() {
+  const myData = gameState ? gameState[myRole] : null;
+  if (!myData) return;
+
+  const atkIdx = document.getElementById("attacker-select").value || 0;
+  const selectedCard = myData.cards[atkIdx];
+
+  if (selectedCard) {
+    document.getElementById("skill-name").innerText = selectedCard.skillName;
+    document.getElementById("skill-desc").innerText = selectedCard.skillDesc;
+  }
+}
+
 function submitCommand(type) {
   const atkIdx = document.getElementById("attacker-select").value;
   const tgtIdx = document.getElementById("target-select").value;
   
   const cmdData = { type: type, attacker: parseInt(atkIdx), target: parseInt(tgtIdx) };
   roomRef.child(`${myRole}/cmd`).set(cmdData);
+}
+
+// === 相性計算関数 ===
+function getAttributeMultiplier(atkType, defType) {
+  // 源流・他者 ➔ 西洋 に強い
+  if ((atkType === "源流" || atkType === "他者") && defType === "西洋") return 1.5;
+  // 西洋 ➔ 日本 に強い
+  if (atkType === "西洋" && defType === "日本") return 1.5;
+  // 日本 ➔ 源流・他者 に強い
+  if (atkType === "日本" && (defType === "源流" || defType === "他者")) return 1.5;
+  
+  return 1.0; // 通常
 }
 
 function processBattlePhase() {
@@ -215,21 +296,40 @@ function applyAction(pName, actorObj, targetObj, cmd) {
 
   if (attacker.hp <= 0) return;
 
+  const mult = getAttributeMultiplier(attacker.type, target.type);
+  const effText = mult > 1.0 ? " (弱点を突いた！)" : "";
+
   if (cmd.type === 'attack') {
-    target.hp = Math.max(0, target.hp - attacker.atk);
-    log(`💥 [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${attacker.atk} ダメージ！`);
+    const damage = Math.floor(attacker.atk * mult);
+    target.hp = Math.max(0, target.hp - damage);
+    log(`💥 [${pName}] ${attacker.name}(${attacker.type}) の攻撃！ ${target.name}(${target.type}) に ${damage} ダメージ！${effText}`);
   } else {
-    target.hp = Math.max(0, target.hp - 15);
-    log(`🔥 [${pName}] ${attacker.name} のスキル！ ${target.name} に 15 ダメージ！`);
+    // スキル攻撃（スキル基本値15）
+    const damage = Math.floor(15 * mult);
+    target.hp = Math.max(0, target.hp - damage);
+    log(`🔥 [${pName}] ${attacker.name} のスキル「${attacker.skillName}」！ ${target.name} に ${damage} ダメージ！${effText}`);
   }
+
   if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
 }
 
-function updateSelectOptions(myCards, enemyCards) {
-  document.getElementById("attacker-select").innerHTML = myCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
-  document.getElementById("target-select").innerHTML = enemyCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
+// === カード拡大モーダル制御 ===
+function openModal(cardId) {
+  const card = CARD_DATABASE.find(c => c.id === cardId);
+  if (!card) return;
+
+  document.getElementById("modal-img").src = card.image;
+  document.getElementById("modal-title").innerText = card.name;
+  document.getElementById("modal-rank").innerText = "ランク: " + card.rank;
+  document.getElementById("modal-type").innerText = "タイプ: " + card.type;
+  document.getElementById("modal-skill-name").innerText = card.skillName;
+  document.getElementById("modal-skill-desc").innerText = card.skillDesc;
+
+  document.getElementById("card-modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("card-modal").style.display = "none";
 }
 </script>
 </body>
