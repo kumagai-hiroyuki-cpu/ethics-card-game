@@ -37,15 +37,15 @@
     button:disabled { background: #7f8c8d; }
     select { padding: 6px; font-size: 13px; border-radius: 4px; margin-bottom: 6px; }
 
-    .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 100px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
+    .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 120px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
 
     /* モーダル (カード拡大表示) */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-card { background: #2c3e50; border: 2px solid #f1c40f; border-radius: 10px; width: 80%; max-width: 280px; padding: 15px; text-align: center; }
-    .modal-img { width: 100%; height: 200px; object-fit: cover; border-radius: 6px; }
-    .modal-title { font-size: 1.2em; color: #f1c40f; font-weight: bold; margin: 10px 0 5px 0; }
-    .modal-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e67e22; font-size: 0.8em; margin-bottom: 8px; font-weight: bold; }
-    .modal-detail { font-size: 0.85em; text-align: left; background: #1a252f; padding: 8px; border-radius: 6px; margin-top: 8px; }
+    .modal-card { background: #2c3e50; border: 2px solid #f1c40f; border-radius: 10px; width: 85%; max-width: 300px; padding: 15px; text-align: center; }
+    .modal-img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; }
+    .modal-title { font-size: 1.2em; color: #f1c40f; font-weight: bold; margin: 8px 0 4px 0; }
+    .modal-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e67e22; font-size: 0.8em; margin-bottom: 6px; font-weight: bold; }
+    .modal-detail { font-size: 0.8em; text-align: left; background: #1a252f; padding: 8px; border-radius: 6px; margin-top: 6px; }
   </style>
 
   <!-- Firebase SDK (安定版v8) -->
@@ -82,8 +82,10 @@
     
     <!-- スキル内容表示エリア -->
     <div class="skill-box">
-      <div class="skill-title">✨ スキル: <span id="skill-name">-</span></div>
-      <div class="skill-desc" id="skill-desc">思想家を選択すると効果が表示されます</div>
+      <div class="skill-title">✨ アクティブ: <span id="skill-name">-</span></div>
+      <div class="skill-desc" id="skill-desc">-</div>
+      <div class="skill-title" style="margin-top: 6px; color: #e74c3c;">🌀 パッシブ: <span id="passive-name">-</span></div>
+      <div class="skill-desc" id="passive-desc">-</div>
     </div>
 
     <button onclick="submitCommand('attack')">通常攻撃</button>
@@ -103,8 +105,11 @@
       <span id="modal-type" class="modal-badge" style="background:#3498db;"></span>
     </div>
     <div class="modal-detail">
-      <strong>【スキル】</strong><span id="modal-skill-name"></span><br>
-      <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
+      <strong style="color:#f39c12;">【アクティブスキル】</strong><br>
+      <span id="modal-skill-name" style="font-weight:bold;"></span>: <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
+      <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
+      <strong style="color:#e74c3c;">【パッシブスキル】</strong><br>
+      <span id="modal-passive-name" style="font-weight:bold;"></span>: <span id="modal-passive-desc" style="color:#bdc3c7;"></span>
     </div>
     <button onclick="closeModal()" style="margin-top:12px;">閉じる</button>
   </div>
@@ -125,14 +130,14 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === テスト用 6人の思想家データ（修正版） ===
+// === テスト用 6人の思想家データ（パッシブスキル設定追加） ===
 const CARD_DATABASE = [
-  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "無知の知", skillDesc: "相手に18の固定ダメージを与える", image: "images/socrates.jpg" },
-  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "定言命法", skillDesc: "相手に18の固定ダメージを与える", image: "images/kant.jpg" },
-  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手に18の固定ダメージを与える", image: "images/watsuji.jpg" },
-  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10の固定ダメージを与える", image: "images/festinger.jpg" },
-  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14の固定ダメージを与える", image: "images/erikson.jpg" },
-  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10の固定ダメージを与える", image: "images/heraclitus.jpg" }
+  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "無知の知", skillDesc: "相手に18ダメージ", passiveName: "無知の知", passiveDesc: "自身のATKが相手より低い時、被ダメージ半減", image: "images/socrates.jpg" },
+  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "定言命法", skillDesc: "相手に18ダメージ", passiveName: "永遠平和のために", passiveDesc: "自身の行動時、チーム全員のHPを10回復", image: "images/kant.jpg" },
+  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手に18ダメージ", passiveName: "間柄支配", passiveDesc: "自身はBランク以下のダメージ反射。他日本キャラはCランク反射", image: "images/watsuji.jpg" },
+  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10ダメージ", passiveName: "ストレス解消", passiveDesc: "自身の行動時、チーム全員のHPを5回復", image: "images/festinger.jpg" },
+  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14ダメージ", passiveName: "終わらない発達段階", passiveDesc: "ターン毎にATK上昇 (Sn=N(N+1)/2、最大21)", image: "images/erikson.jpg" },
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10ダメージ", passiveName: "万物の流転", passiveDesc: "ターン終了時に自身のHPを5回復", image: "images/heraclitus.jpg" }
 ];
 
 let myRole = "";
@@ -156,8 +161,8 @@ function joinRoom(role) {
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     const initialState = {
       turnCount: 1,
-      p1: { cards: shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp})), cmd: null },
-      p2: { cards: shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp})), cmd: null },
+      p1: { cards: shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
+      p2: { cards: shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
       phase: "waiting_p2"
     };
     roomRef.set(initialState);
@@ -233,7 +238,7 @@ function updateSelectOptions(myCards, enemyCards) {
   const currentTgtVal = tgtSelect.value;
 
   atkSelect.innerHTML = myCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp}/ATK:${c.atk})</option>`).join('');
   tgtSelect.innerHTML = enemyCards
     .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
 
@@ -253,6 +258,8 @@ function updateSkillDisplay() {
   if (selectedCard) {
     document.getElementById("skill-name").innerText = selectedCard.skillName;
     document.getElementById("skill-desc").innerText = selectedCard.skillDesc;
+    document.getElementById("passive-name").innerText = selectedCard.passiveName;
+    document.getElementById("passive-desc").innerText = selectedCard.passiveDesc;
   }
 }
 
@@ -268,15 +275,24 @@ function submitCommand(type) {
 function getAttributeMultiplier(atkType, defType) {
   if ((atkType === "源流" || atkType === "他者") && defType === "西洋") return 1.5;
   if (atkType === "西洋" && defType === "日本") return 1.5;
-  if (atkType === "日本" && (atkType === "源流" || atkType === "他者")) return 1.5;
+  if (atkType === "日本" && (defType === "源流" || defType === "他者")) return 1.5;
   return 1.0;
 }
 
 function processBattlePhase() {
   log(`=== 第 ${gameState.turnCount} ターン 結果発表！ ===`);
   
+  // 1. ターン開始時パッシブ処理 (エリクソンの攻撃力成長)
+  applyTurnStartPassives(gameState.p1, gameState.turnCount);
+  applyTurnStartPassives(gameState.p2, gameState.turnCount);
+
+  // 2. 行動処理
   applyAction("P1", gameState.p1, gameState.p2, gameState.p1.cmd);
   applyAction("P2", gameState.p2, gameState.p1, gameState.p2.cmd);
+
+  // 3. ターン終了時パッシブ処理 (ヘラクレイトスの自動回復)
+  applyTurnEndPassives("P1", gameState.p1);
+  applyTurnEndPassives("P2", gameState.p2);
 
   gameState.turnCount++;
   gameState.p1.cmd = null;
@@ -286,6 +302,27 @@ function processBattlePhase() {
   roomRef.set(gameState);
 }
 
+// === エリクソン パッシブ（ターン開始時） ===
+function applyTurnStartPassives(playerObj, turn) {
+  playerObj.cards.forEach(c => {
+    if (c.id === "erikson" && c.hp > 0) {
+      const n = turn;
+      const bonusAtk = (n * (n + 1)) / 2;
+      c.atk = Math.min(21, c.baseAtk + bonusAtk); // 最大21制限
+    }
+  });
+}
+
+// === ヘラクレイトス パッシブ（ターン終了時） ===
+function applyTurnEndPassives(pName, playerObj) {
+  playerObj.cards.forEach(c => {
+    if (c.id === "heraclitus" && c.hp > 0 && c.hp < c.maxHp) {
+      c.hp = Math.min(c.maxHp, c.hp + 5);
+      log(`🌀 [${pName}] ヘラクレイトスの「万物の流転」！ HPが 5 回復！`);
+    }
+  });
+}
+
 function applyAction(pName, actorObj, targetObj, cmd) {
   const attacker = actorObj.cards[cmd.attacker];
   const target = targetObj.cards[cmd.target];
@@ -293,19 +330,46 @@ function applyAction(pName, actorObj, targetObj, cmd) {
   if (attacker.hp <= 0) return;
 
   const mult = getAttributeMultiplier(attacker.type, target.type);
-  const effText = mult > 1.0 ? " (弱点を突いた！)" : "";
+  let baseDamage = (cmd.type === 'attack') ? attacker.atk : 15;
+  let finalDamage = Math.floor(baseDamage * mult);
+  
+  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
 
-  if (cmd.type === 'attack') {
-    const damage = Math.floor(attacker.atk * mult);
-    target.hp = Math.max(0, target.hp - damage);
-    log(`💥 [${pName}] ${attacker.name}(${attacker.type}) の攻撃！ ${target.name}(${target.type}) に ${damage} ダメージ！${effText}`);
-  } else {
-    const damage = Math.floor(15 * mult);
-    target.hp = Math.max(0, target.hp - damage);
-    log(`🔥 [${pName}] ${attacker.name} のスキル「${attacker.skillName}」！ ${target.name} に ${damage} ダメージ！${effText}`);
+  // --- 被弾側パッシブ判定1：和辻哲郎「間柄支配」（反射） ---
+  let isReflected = false;
+  if (target.id === "watsuji" && (attacker.rank === "B" || attacker.rank === "C")) {
+    isReflected = true;
+  } else if (target.type === "日本" && target.id !== "watsuji" && attacker.rank === "C") {
+    // チームに和辻がいるか確認
+    const hasWatsuji = actorObj.cards.some(c => c.id === "watsuji" && c.hp > 0);
+    if (hasWatsuji) isReflected = true;
   }
 
-  if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
+  if (isReflected) {
+    attacker.hp = Math.max(0, attacker.hp - finalDamage);
+    log(`🌀 [${pName}] ${attacker.name} の攻撃！ しかし ${target.name} の「間柄支配」により ${finalDamage} ダメージが反射された！`);
+    if (attacker.hp === 0) log(`☠️ ${attacker.name} は自滅した！`);
+  } else {
+    // --- 被弾側パッシブ判定2：ソクラテス「無知の知」（ダメージ半減） ---
+    if (target.id === "socrates" && target.atk < attacker.atk) {
+      finalDamage = Math.floor(finalDamage / 2);
+      effText += " (無知の知でダメージ半減！)";
+    }
+
+    target.hp = Math.max(0, target.hp - finalDamage);
+    const actName = cmd.type === 'attack' ? "攻撃" : `スキル「${attacker.skillName}」`;
+    log(`💥 [${pName}] ${attacker.name} の ${actName}！ ${target.name} に ${finalDamage} ダメージ！${effText}`);
+    if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
+  }
+
+  // --- 行動側パッシブ判定：カント / フェスティンガー（味方全員回復） ---
+  if (attacker.id === "kant") {
+    actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 10); });
+    log(`🌀 [${pName}] カントの「永遠平和のために」！ 味方全員のHPが 10 回復！`);
+  } else if (attacker.id === "festinger") {
+    actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 5); });
+    log(`🌀 [${pName}] フェスティンガーの「ストレス解消」！ 味方全員のHPが 5 回復！`);
+  }
 }
 
 // === カード拡大モーダル制御 ===
@@ -319,6 +383,8 @@ function openModal(cardId) {
   document.getElementById("modal-type").innerText = "タイプ: " + card.type;
   document.getElementById("modal-skill-name").innerText = card.skillName;
   document.getElementById("modal-skill-desc").innerText = card.skillDesc;
+  document.getElementById("modal-passive-name").innerText = card.passiveName;
+  document.getElementById("modal-passive-desc").innerText = card.passiveDesc;
 
   document.getElementById("card-modal").style.display = "flex";
 }
