@@ -19,6 +19,7 @@
     .card-container { width: 30%; max-width: 140px; background: #333; border-radius: 6px; overflow: hidden; border: 2px solid #555; cursor: pointer; position: relative; transition: transform 0.1s; }
     .card-container:active { transform: scale(0.95); }
     .card-container.defeated { opacity: 0.3; filter: grayscale(100%); pointer-events: none; }
+    .card-container.synergy-active { border: 2px solid #f1c40f; box-shadow: 0 0 8px #f1c40f; }
     
     .card-image { width: 100%; height: 140px; object-fit: cover; display: block; background: #000; }
     .card-info { padding: 5px; background: rgba(0,0,0,0.8); }
@@ -34,7 +35,7 @@
     .skill-desc { color: #ecf0f1; font-size: 0.8em; }
 
     button { background: #e67e22; color: #fff; border: none; padding: 8px 16px; font-size: 14px; border-radius: 4px; cursor: pointer; margin: 4px; font-weight: bold; }
-    button:disabled { background: #7f8c8d; }
+    button:disabled { background: #7f8c8d; cursor: not-allowed; opacity: 0.6; }
     select { padding: 6px; font-size: 13px; border-radius: 4px; margin-bottom: 6px; }
 
     .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 140px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
@@ -78,18 +79,18 @@
   <div id="wait-msg" class="status-msg" style="font-size: 0.9em;">コマンドを選択してください</div>
   <div id="command-inputs">
     行動する思想家: <select id="attacker-select" onchange="updateSkillDisplay()"></select><br>
-    攻撃ターゲット: <select id="target-select"></select><br>
+    <span style="font-size:0.8em; color:#bdc3c7;">※攻撃ターゲットは自動でランダムに選ばれます</span><br>
     
     <!-- スキル内容表示エリア -->
     <div class="skill-box">
-      <div class="skill-title">✨ アクティブ: <span id="skill-name">-</span></div>
+      <div class="skill-title">✨ アクティブ [Pt:<span id="active-val">0</span>]: <span id="skill-name">-</span></div>
       <div class="skill-desc" id="skill-desc">-</div>
-      <div class="skill-title" style="margin-top: 6px; color: #e74c3c;">🌀 パッシブ: <span id="passive-name">-</span></div>
+      <div class="skill-title" style="margin-top: 6px; color: #e74c3c;">🌀 パッシブ [Pt:<span id="passive-val">0</span>]: <span id="passive-name">-</span></div>
       <div class="skill-desc" id="passive-desc">-</div>
     </div>
 
     <button onclick="submitCommand('attack')">通常攻撃</button>
-    <button onclick="submitCommand('skill')">スキル発動</button>
+    <button id="skill-btn" onclick="submitCommand('skill')">スキル発動</button>
   </div>
 </div>
 
@@ -105,11 +106,14 @@
       <span id="modal-type" class="modal-badge" style="background:#3498db;"></span>
     </div>
     <div class="modal-detail">
-      <strong style="color:#f39c12;">【アクティブスキル】</strong><br>
+      <strong style="color:#f39c12;">【アクティブスキル】</strong> (Pt:<span id="modal-active-val"></span>)<br>
       <span id="modal-skill-name" style="font-weight:bold;"></span>: <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
       <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
-      <strong style="color:#e74c3c;">【パッシブスキル】</strong><br>
+      <strong style="color:#e74c3c;">【パッシブスキル】</strong> (Pt:<span id="modal-passive-val"></span>)<br>
       <span id="modal-passive-name" style="font-weight:bold;"></span>: <span id="modal-passive-desc" style="color:#bdc3c7;"></span>
+      <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
+      <strong style="color:#1abc9c;">【絆タグ】</strong><br>
+      <span id="modal-tags" style="color:#1abc9c;"></span>
     </div>
     <button onclick="closeModal()" style="margin-top:12px;">閉じる</button>
   </div>
@@ -131,87 +135,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === 思想家データベース (6名完全設定) ===
-const CARD_DATABASE = [
-  { 
-    id: "socrates", 
-    name: "ソクラテス", 
-    rank: "S", 
-    type: "源流", 
-    maxHp: 100, 
-    atk: 12, 
-    skillName: "問答法", 
-    skillDesc: "相手のATKを-10し、自身のATKを+10する", 
-    passiveName: "無知の知", 
-    passiveDesc: "自身の能力値が相手より低い時、受けるダメージが1/2になる", 
-    image: "images/socrates.jpg" 
-  },
-  { 
-    id: "kant", 
-    name: "カント", 
-    rank: "S", 
-    type: "西洋", 
-    maxHp: 100, 
-    atk: 12, 
-    skillName: "善意志の行為", 
-    skillDesc: "相手単体に40の強力ダメージを与える", 
-    passiveName: "永遠平和のために", 
-    passiveDesc: "自身が行動するたび、チーム全員のHPを10回復する", 
-    image: "images/kant.jpg" 
-  },
-  { 
-    id: "watsuji", 
-    name: "和辻哲郎", 
-    rank: "S", 
-    type: "日本", 
-    maxHp: 100, 
-    atk: 12, 
-    skillName: "風土改変", 
-    skillDesc: "全バフ・デバフ解除＋敵全体のHP/ATKを半減し、削った分を和辻自身に加算する", 
-    passiveName: "間柄支配", 
-    passiveDesc: "自身はBランク以下のダメージを反射。他日本キャラはCランクダメージを反射", 
-    image: "images/watsuji.jpg" 
-  },
-  { 
-    id: "festinger", 
-    name: "フェスティンガー", 
-    rank: "C", 
-    type: "他者", 
-    maxHp: 50, 
-    atk: 6, 
-    skillName: "認知的不協和", 
-    skillDesc: "同ターンに相手が打とうとしたアクティブスキルを無効化する", 
-    passiveName: "ストレス解消", 
-    passiveDesc: "自身が行動するたび、チーム全員のHPを5回復する", 
-    image: "images/festinger.jpg" 
-  },
-  { 
-    id: "erikson", 
-    name: "エリクソン", 
-    rank: "A", 
-    type: "他者", 
-    maxHp: 80, 
-    atk: 9, 
-    skillName: "発達段階巻き戻しビーム", 
-    skillDesc: "サイコロ(0〜5)を振り、出た目の数だけ相手のATKを低下させる", 
-    passiveName: "終わらない発達段階", 
-    passiveDesc: "1ターンごとにATK上昇(Sn=N(N+1)/2)。最大ATK21", 
-    image: "images/erikson.jpg" 
-  },
-  { 
-    id: "heraclitus", 
-    name: "ヘラクレイトス", 
-    rank: "C", 
-    type: "源流", 
-    maxHp: 50, 
-    atk: 6, 
-    skillName: "母なる炎", 
-    skillDesc: "相手チーム全員にそれぞれ5ダメージを与える", 
-    passiveName: "万物の流転", 
-    passiveDesc: "毎ターン終了時、自身のHPを5自動回復する", 
-    image: "images/heraclitus.jpg" 
-  }
-];
+let CARD_DATABASE = [];
+
+fetch('cards.json')
+  .then(response => response.json())
+  .then(data => {
+    CARD_DATABASE = data;
+    console.log("思想家データ全 " + CARD_DATABASE.length + " 件の読み込みが完了しました！");
+  })
+  .catch(error => console.error("cards.json 読み込みエラー:", error));
 
 let myRole = "";
 let roomId = "";
@@ -223,10 +155,44 @@ function log(msg) {
   if (l) l.innerHTML = "<div>・" + msg + "</div>" + l.innerHTML;
 }
 
+// === 絆（シナジー）判定関数 ===
+function applyTeamSynergy(cards, teamName) {
+  const tagCounts = {};
+  
+  // タグの出現回数をカウント
+  cards.forEach(c => {
+    if (c.synergyTags && Array.isArray(c.synergyTags)) {
+      c.synergyTags.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    }
+  });
+
+  // 2名以上で共通のタグがあれば絆発動（HP 1.2倍）
+  cards.forEach(c => {
+    c.hasSynergy = false;
+    if (c.synergyTags && Array.isArray(c.synergyTags)) {
+      c.synergyTags.forEach(tag => {
+        if (tagCounts[tag] >= 2) {
+          c.hasSynergy = true;
+        }
+      });
+    }
+
+    if (c.hasSynergy && !c.synergyApplied) {
+      c.maxHp = Math.floor(c.maxHp * 1.2);
+      c.hp = c.maxHp;
+      c.synergyApplied = true;
+      log("🤝 【絆発動】[" + teamName + "] " + c.name + " の絆効果発動！ HPが1.2倍(" + c.maxHp + ")に強化！");
+    }
+  });
+}
+
 function joinRoom(role) {
   const inputEl = document.getElementById("room-id-input");
   roomId = inputEl ? inputEl.value : "";
   if (!roomId) return alert("部屋IDを入力してください！");
+  if (CARD_DATABASE.length === 0) return alert("カードデータを読み込み中です。少々お待ちください。");
 
   myRole = role;
   roomRef = db.ref("rooms/" + roomId);
@@ -235,10 +201,17 @@ function joinRoom(role) {
 
   if (role === 'p1') {
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
+    const p1Cards = shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk}));
+    const p2Cards = shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk}));
+
+    // 絆効果のチェック＆適用
+    applyTeamSynergy(p1Cards, "P1");
+    applyTeamSynergy(p2Cards, "P2");
+
     const initialState = {
       turnCount: 1,
-      p1: { cards: shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
-      p2: { cards: shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
+      p1: { cards: p1Cards, cmd: null },
+      p2: { cards: p2Cards, cmd: null },
       phase: "waiting_p2"
     };
     roomRef.set(initialState)
@@ -282,7 +255,7 @@ function updateGameUI() {
     renderCards("my-cards", myData.cards);
     renderCards("enemy-cards", enemyData.cards);
 
-    updateSelectOptions(myData.cards, enemyData.cards);
+    updateSelectOptions(myData.cards);
 
     if (myData.cmd) {
       document.getElementById("command-inputs").style.display = "none";
@@ -304,11 +277,12 @@ function renderCards(containerId, cards) {
 
   el.innerHTML = cards.map((c) => {
     const hpPercent = Math.max(0, (c.hp / c.maxHp) * 100);
+    const synergyClass = c.hasSynergy ? 'synergy-active' : '';
     return `
-      <div class="card-container ${c.hp === 0 ? 'defeated' : ''}" onclick="openModal('${c.id}')">
+      <div class="card-container ${c.hp === 0 ? 'defeated' : ''} ${synergyClass}" onclick="openModal('${c.id}')">
         <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image';">
         <div class="card-info">
-          <div class="card-name">${c.name}</div>
+          <div class="card-name">${c.hasSynergy ? '🤝 ' : ''}${c.name}</div>
           <div class="hp-bar">
             <div class="hp-fill" style="width: ${hpPercent}%;"></div>
             <div class="hp-text">${c.hp}/${c.maxHp}</div>
@@ -319,21 +293,16 @@ function renderCards(containerId, cards) {
   }).join('');
 }
 
-function updateSelectOptions(myCards, enemyCards) {
+function updateSelectOptions(myCards) {
   const atkSelect = document.getElementById("attacker-select");
-  const tgtSelect = document.getElementById("target-select");
-  if (!atkSelect || !tgtSelect || !myCards || !enemyCards) return;
+  if (!atkSelect || !myCards) return;
 
   const currentAtkVal = atkSelect.value;
-  const currentTgtVal = tgtSelect.value;
 
   atkSelect.innerHTML = myCards
     .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk})</option>`).join('');
-  tgtSelect.innerHTML = enemyCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (HP:${c.hp})</option>`).join('');
 
   if (currentAtkVal !== "") atkSelect.value = currentAtkVal;
-  if (currentTgtVal !== "") tgtSelect.value = currentTgtVal;
 
   updateSkillDisplay();
 }
@@ -344,24 +313,41 @@ function updateSkillDisplay() {
 
   const atkIdx = document.getElementById("attacker-select").value || 0;
   const selectedCard = myData.cards[atkIdx];
+  const skillBtn = document.getElementById("skill-btn");
 
   if (selectedCard) {
+    document.getElementById("active-val").innerText = selectedCard.activeVal ?? 0;
     document.getElementById("skill-name").innerText = selectedCard.skillName || "-";
     document.getElementById("skill-desc").innerText = selectedCard.skillDesc || "-";
+    
+    document.getElementById("passive-val").innerText = selectedCard.passiveVal ?? 0;
     document.getElementById("passive-name").innerText = selectedCard.passiveName || "-";
     document.getElementById("passive-desc").innerText = selectedCard.passiveDesc || "-";
+
+    if (selectedCard.activeVal === 0) {
+      skillBtn.disabled = true;
+      skillBtn.title = "アクティブスキルポイントが0のため発動できません";
+    } else {
+      skillBtn.disabled = false;
+      skillBtn.title = "";
+    }
   }
 }
 
 function submitCommand(type) {
   const atkIdx = document.getElementById("attacker-select").value;
-  const tgtIdx = document.getElementById("target-select").value;
-  
-  const cmdData = { type: type, attacker: parseInt(atkIdx), target: parseInt(tgtIdx) };
+  // ターゲットは送信せず、サーバー処理側で自動選出
+  const cmdData = { type: type, attacker: parseInt(atkIdx) };
   roomRef.child(`${myRole}/cmd`).set(cmdData);
 }
 
-// === 属性相性判定 (1.5倍) ===
+function getRandomTarget(targetCards) {
+  const aliveTargets = targetCards.map((c, i) => ({ ...c, originalIdx: i })).filter(c => c.hp > 0);
+  if (aliveTargets.length === 0) return null;
+  const randIdx = Math.floor(Math.random() * aliveTargets.length);
+  return aliveTargets[randIdx].originalIdx;
+}
+
 function getAttributeMultiplier(atkType, defType) {
   if ((atkType === "源流" || atkType === "他者") && defType === "西洋") return 1.5;
   if (atkType === "西洋" && defType === "日本") return 1.5;
@@ -369,19 +355,15 @@ function getAttributeMultiplier(atkType, defType) {
   return 1.0;
 }
 
-// === ターン処理制御 ===
 function processBattlePhase() {
   log("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
   
-  // 1. ターン開始時パッシブ (エリクソン：階差数列 Sn=N(N+1)/2 攻撃成長)
   applyTurnStartPassives(gameState.p1, gameState.turnCount);
   applyTurnStartPassives(gameState.p2, gameState.turnCount);
 
-  // 2. 行動処理
   applyAction("P1", gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
   applyAction("P2", gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
 
-  // 3. ターン終了時パッシブ (ヘラクレイトス：HP5自動回復)
   applyTurnEndPassives("P1", gameState.p1);
   applyTurnEndPassives("P2", gameState.p2);
 
@@ -393,46 +375,47 @@ function processBattlePhase() {
   roomRef.set(gameState);
 }
 
-// === エリクソン パッシブ（ターン開始時） ===
 function applyTurnStartPassives(playerObj, turn) {
   if (!playerObj || !playerObj.cards) return;
   playerObj.cards.forEach(c => {
-    if (c.id === "erikson" && c.hp > 0) {
+    if (c.id === "erikson" && c.hp > 0 && c.passiveVal > 0) {
       const bonusAtk = (turn * (turn + 1)) / 2;
-      c.atk = Math.min(21, c.baseAtk + bonusAtk); // 最大21制限
+      c.atk = Math.min(21, c.baseAtk + bonusAtk);
     }
   });
 }
 
-// === ヘラクレイトス パッシブ（ターン終了時） ===
 function applyTurnEndPassives(pName, playerObj) {
   if (!playerObj || !playerObj.cards) return;
   playerObj.cards.forEach(c => {
-    if (c.id === "heraclitus" && c.hp > 0 && c.hp < c.maxHp) {
-      c.hp = Math.min(c.maxHp, c.hp + 5);
-      log("🌀 [" + pName + "] ヘラクレイトスの「万物の流転」！ HPが 5 回復！");
+    if (c.id === "heraclitus" && c.hp > 0 && c.hp < c.maxHp && c.passiveVal > 0) {
+      const healAmt = c.passiveVal;
+      c.hp = Math.min(c.maxHp, c.hp + healAmt);
+      log("🌀 [" + pName + "] ヘラクレイトスの「万物の流転」！ HPが " + healAmt + " 回復！");
     }
   });
 }
 
-// === 行動実行ロジック ===
 function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
 
   const attacker = actorObj.cards[cmd.attacker];
-  const target = targetObj ? targetObj.cards[cmd.target] : null;
-
   if (attacker.hp <= 0) return;
 
-  // 通常攻撃
+  // 生存している相手からランダムにターゲット決定
+  const tgtIdx = getRandomTarget(targetObj.cards);
+  const target = tgtIdx !== null ? targetObj.cards[tgtIdx] : null;
+
   if (cmd.type === 'attack') {
     if (target && target.hp > 0) {
       executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
     }
-  } 
-  // スキル攻撃
-  else {
-    // フェスティンガー「認知的不協和」（カウンター無効化）
+  } else {
+    if (attacker.activeVal === 0) {
+      log("⚠️ [" + pName + "] " + attacker.name + " はアクティブスキルを持たない！");
+      return;
+    }
+
     if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
       const oppAttacker = targetObj.cards[oppCmd.attacker];
       if (oppAttacker.id === 'festinger' && oppAttacker.hp > 0) {
@@ -444,20 +427,20 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     log("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！");
 
     switch (attacker.id) {
-      case "socrates": // 問答法 (能力吸収)
+      case "socrates":
         if (target) {
-          const stealAmt = Math.min(10, target.atk);
+          const stealAmt = Math.min(attacker.activeVal, target.atk);
           target.atk -= stealAmt;
-          attacker.atk += 10;
-          log("✨ " + attacker.name + " は " + target.name + " から能力を10奪った！ (自分のATK:" + attacker.atk + " / 相手ATK:" + target.atk + ")");
+          attacker.atk += stealAmt;
+          log("✨ " + attacker.name + " は " + target.name + " から能力を" + stealAmt + "奪った！ (自分のATK:" + attacker.atk + " / 相手ATK:" + target.atk + ")");
         }
         break;
 
-      case "kant": // 善意志の行為 (固定40ダメージ)
-        if (target) executeDamage(pName, attacker, target, actorObj, targetObj, 40, true);
+      case "kant":
+        if (target) executeDamage(pName, attacker, target, actorObj, targetObj, attacker.activeVal * 2, true);
         break;
 
-      case "watsuji": // 風土改変 (デバフ解除＋ステ半減吸収)
+      case "watsuji":
         actorObj.cards.forEach(c => { if(c.atk < c.baseAtk) c.atk = c.baseAtk; });
         if (targetObj) targetObj.cards.forEach(c => { if(c.atk > c.baseAtk) c.atk = c.baseAtk; });
 
@@ -484,14 +467,14 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
         attacker.atk += totalStolenAtk;
 
         log("🌾 和辻哲郎の「風土改変」発動！ 両チームの状態異常を解除し、敵全体の能力を半減！");
-        log("✨ 敵から奪った HP:" + totalStolenHp + " / ATK:" + totalStolenAtk + " を和辻哲郎に加算！ (新HP:" + attacker.hp + " / 新ATK:" + attacker.atk + ")");
+        log("✨ 敵から奪った HP:" + totalStolenHp + " / ATK:" + totalStolenAtk + " を和辻哲郎に加算！");
         break;
 
-      case "festinger": // 認知的不協和 (展開ログ)
+      case "festinger":
         log("✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！");
         break;
 
-      case "erikson": // 発達段階巻き戻しビーム (ダイス0〜5)
+      case "erikson":
         if (target) {
           const dice = Math.floor(Math.random() * 6);
           const reduced = Math.min(dice, target.atk);
@@ -500,11 +483,12 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
         }
         break;
 
-      case "heraclitus": // 母なる炎 (全体5ダメージ)
+      case "heraclitus":
         if (targetObj) {
+          const dmg = attacker.activeVal;
           targetObj.cards.forEach(tCard => {
             if (tCard.hp > 0) {
-              executeDamage(pName, attacker, tCard, actorObj, targetObj, 5, true);
+              executeDamage(pName, attacker, tCard, actorObj, targetObj, dmg, true);
             }
           });
         }
@@ -512,17 +496,15 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     }
   }
 
-  // 行動時パッシブ判定：カント(全体HP+10) / フェスティンガー(全体HP+5)
-  if (attacker.id === "kant") {
-    actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 10); });
-    log("🌀 [" + pName + "] カントの「永遠平和のために」！ 味方全員のHPが 10 回復！");
-  } else if (attacker.id === "festinger") {
-    actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 5); });
-    log("🌀 [" + pName + "] フェスティンガーの「ストレス解消」！ 味方全員のHPが 5 回復！");
+  if (attacker.passiveVal > 0) {
+    if (attacker.id === "kant" || attacker.id === "festinger") {
+      const healAmt = attacker.passiveVal;
+      actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + healAmt); });
+      log("🌀 [" + pName + "] " + attacker.name + " の「" + attacker.passiveName + "」！ 味方全員のHPが " + healAmt + " 回復！");
+    }
   }
 }
 
-// === ダメージ共通計算ロジック (反射・半減・相性計算) ===
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
@@ -530,7 +512,6 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   let finalDamage = Math.floor(baseDmg * mult);
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
 
-  // 和辻哲郎「間柄支配」（反射判定）
   let isReflected = false;
   if (target.id === "watsuji" && (attacker.rank === "B" || attacker.rank === "C")) {
     isReflected = true;
@@ -544,7 +525,6 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     log("🌀 " + target.name + " の「間柄支配」！ " + finalDamage + " ダメージが " + attacker.name + " に反射された！");
     if (attacker.hp === 0) log("☠️ " + attacker.name + " は自滅した！");
   } else {
-    // ソクラテス「無知の知」（ダメージ半減判定）
     if (target.id === "socrates" && target.atk < attacker.atk) {
       finalDamage = Math.floor(finalDamage / 2);
       effText += " (無知の知でダメージ半減！)";
@@ -556,7 +536,6 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   }
 }
 
-// === カード拡大モーダル制御 ===
 function openModal(cardId) {
   const card = CARD_DATABASE.find(c => c.id === cardId);
   if (!card) return;
@@ -565,10 +544,16 @@ function openModal(cardId) {
   document.getElementById("modal-title").innerText = card.name;
   document.getElementById("modal-rank").innerText = "ランク: " + card.rank;
   document.getElementById("modal-type").innerText = "タイプ: " + card.type;
+  
+  document.getElementById("modal-active-val").innerText = card.activeVal ?? 0;
   document.getElementById("modal-skill-name").innerText = card.skillName;
   document.getElementById("modal-skill-desc").innerText = card.skillDesc;
+
+  document.getElementById("modal-passive-val").innerText = card.passiveVal ?? 0;
   document.getElementById("modal-passive-name").innerText = card.passiveName;
   document.getElementById("modal-passive-desc").innerText = card.passiveDesc;
+
+  document.getElementById("modal-tags").innerText = (card.synergyTags && card.synergyTags.length > 0) ? card.synergyTags.join(", ") : "なし";
 
   document.getElementById("card-modal").style.display = "flex";
 }
