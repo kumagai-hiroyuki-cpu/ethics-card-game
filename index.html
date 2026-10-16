@@ -83,7 +83,7 @@
     
     <!-- スキル内容表示エリア -->
     <div class="skill-box">
-      <div class="skill-title">✨ アクティブ [Pt:<span id="active-val">0</span>]: <span id="skill-name">-</span></div>
+      <div class="skill-title">✨ アクティブ [Pt:<span id="active-val">0</span>]: <span id="skill-name">-</span> <span id="skill-used-status" style="color:#e74c3c;"></span></div>
       <div class="skill-desc" id="skill-desc">-</div>
       <div class="skill-title" style="margin-top: 6px; color: #e74c3c;">🌀 パッシブ [Pt:<span id="passive-val">0</span>]: <span id="passive-name">-</span></div>
       <div class="skill-desc" id="passive-desc">-</div>
@@ -159,7 +159,6 @@ function log(msg) {
 function applyTeamSynergy(cards, teamName) {
   const tagCounts = {};
   
-  // タグの出現回数をカウント
   cards.forEach(c => {
     if (c.synergyTags && Array.isArray(c.synergyTags)) {
       c.synergyTags.forEach(tag => {
@@ -168,7 +167,6 @@ function applyTeamSynergy(cards, teamName) {
     }
   });
 
-  // 2名以上で共通のタグがあれば絆発動（HP 1.2倍）
   cards.forEach(c => {
     c.hasSynergy = false;
     if (c.synergyTags && Array.isArray(c.synergyTags)) {
@@ -201,10 +199,9 @@ function joinRoom(role) {
 
   if (role === 'p1') {
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
-    const p1Cards = shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk}));
-    const p2Cards = shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk}));
+    const p1Cards = shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk, skillUsed: false}));
+    const p2Cards = shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk, skillUsed: false}));
 
-    // 絆効果のチェック＆適用
     applyTeamSynergy(p1Cards, "P1");
     applyTeamSynergy(p2Cards, "P2");
 
@@ -300,7 +297,7 @@ function updateSelectOptions(myCards) {
   const currentAtkVal = atkSelect.value;
 
   atkSelect.innerHTML = myCards
-    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk})</option>`).join('');
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk}) ${c.skillUsed ? '[スキル済]':''}</option>`).join('');
 
   if (currentAtkVal !== "") atkSelect.value = currentAtkVal;
 
@@ -314,6 +311,7 @@ function updateSkillDisplay() {
   const atkIdx = document.getElementById("attacker-select").value || 0;
   const selectedCard = myData.cards[atkIdx];
   const skillBtn = document.getElementById("skill-btn");
+  const statusEl = document.getElementById("skill-used-status");
 
   if (selectedCard) {
     document.getElementById("active-val").innerText = selectedCard.activeVal ?? 0;
@@ -324,19 +322,25 @@ function updateSkillDisplay() {
     document.getElementById("passive-name").innerText = selectedCard.passiveName || "-";
     document.getElementById("passive-desc").innerText = selectedCard.passiveDesc || "-";
 
+    // activeVal === 0 または 既に1回スキル使用済みの場合はボタン無効化
     if (selectedCard.activeVal === 0) {
       skillBtn.disabled = true;
       skillBtn.title = "アクティブスキルポイントが0のため発動できません";
+      if (statusEl) statusEl.innerText = "";
+    } else if (selectedCard.skillUsed) {
+      skillBtn.disabled = true;
+      skillBtn.title = "アクティブスキルは1戦闘につき1回までです";
+      if (statusEl) statusEl.innerText = "(1回のみ使用済み)";
     } else {
       skillBtn.disabled = false;
       skillBtn.title = "";
+      if (statusEl) statusEl.innerText = "";
     }
   }
 }
 
 function submitCommand(type) {
   const atkIdx = document.getElementById("attacker-select").value;
-  // ターゲットは送信せず、サーバー処理側で自動選出
   const cmdData = { type: type, attacker: parseInt(atkIdx) };
   roomRef.child(`${myRole}/cmd`).set(cmdData);
 }
@@ -402,7 +406,6 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   const attacker = actorObj.cards[cmd.attacker];
   if (attacker.hp <= 0) return;
 
-  // 生存している相手からランダムにターゲット決定
   const tgtIdx = getRandomTarget(targetObj.cards);
   const target = tgtIdx !== null ? targetObj.cards[tgtIdx] : null;
 
@@ -411,10 +414,14 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
       executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
     }
   } else {
-    if (attacker.activeVal === 0) {
-      log("⚠️ [" + pName + "] " + attacker.name + " はアクティブスキルを持たない！");
+    // 1戦闘中1回のみ制限フラグチェック
+    if (attacker.activeVal === 0 || attacker.skillUsed) {
+      log("⚠️ [" + pName + "] " + attacker.name + " はスキルを発動できない！");
       return;
     }
+
+    // スキル使用済みフラグをオンに設定
+    attacker.skillUsed = true;
 
     if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
       const oppAttacker = targetObj.cards[oppCmd.attacker];
@@ -424,7 +431,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
       }
     }
 
-    log("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！");
+    log("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！(1回限り使用済)");
 
     switch (attacker.id) {
       case "socrates":
