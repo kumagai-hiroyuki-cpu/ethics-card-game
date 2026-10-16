@@ -128,13 +128,8 @@ const firebaseConfig = {
   measurementId: "G-R8SYD17150"
 };
 
-let db = null;
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-} catch(e) {
-  console.error("Firebase Init Error:", e);
-}
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 // === 思想家データベース (6名完全設定) ===
 const CARD_DATABASE = [
@@ -225,15 +220,13 @@ let gameState = null;
 
 function log(msg) {
   const l = document.getElementById("log");
-  if (l) l.innerHTML = `<div>・${msg}</div>` + l.innerHTML;
+  if (l) l.innerHTML = "<div>・" + msg + "</div>" + l.innerHTML;
 }
 
 function joinRoom(role) {
   const inputEl = document.getElementById("room-id-input");
   roomId = inputEl ? inputEl.value : "";
   if (!roomId) return alert("部屋IDを入力してください！");
-  
-  if (!db) return alert("Firebaseへの接続に失敗しています。画面を再読み込みしてください。");
 
   myRole = role;
   roomRef = db.ref("rooms/" + roomId);
@@ -378,7 +371,7 @@ function getAttributeMultiplier(atkType, defType) {
 
 // === ターン処理制御 ===
 function processBattlePhase() {
-  log(`=== 第 ${gameState.turnCount} ターン 結果発表！ ===`);
+  log("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
   
   // 1. ターン開始時パッシブ (エリクソン：階差数列 Sn=N(N+1)/2 攻撃成長)
   applyTurnStartPassives(gameState.p1, gameState.turnCount);
@@ -417,7 +410,7 @@ function applyTurnEndPassives(pName, playerObj) {
   playerObj.cards.forEach(c => {
     if (c.id === "heraclitus" && c.hp > 0 && c.hp < c.maxHp) {
       c.hp = Math.min(c.maxHp, c.hp + 5);
-      log(`🌀 [${pName}] ヘラクレイトスの「万物の流転」！ HPが 5 回復！`);
+      log("🌀 [" + pName + "] ヘラクレイトスの「万物の流転」！ HPが 5 回復！");
     }
   });
 }
@@ -443,12 +436,12 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
       const oppAttacker = targetObj.cards[oppCmd.attacker];
       if (oppAttacker.id === 'festinger' && oppAttacker.hp > 0) {
-        log(`🚫 [${pName}] ${attacker.name} のスキルはフェスティンガーの「認知的不協和」により無効化された！`);
+        log("🚫 [" + pName + "] " + attacker.name + " のスキルはフェスティンガーの「認知的不協和」により無効化された！");
         return;
       }
     }
 
-    log(`🔥 [${pName}] ${attacker.name} のスキル「${attacker.skillName}」！`);
+    log("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！");
 
     switch (attacker.id) {
       case "socrates": // 問答法 (能力吸収)
@@ -456,7 +449,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
           const stealAmt = Math.min(10, target.atk);
           target.atk -= stealAmt;
           attacker.atk += 10;
-          log(`✨ ${attacker.name} は ${target.name} から能力を10奪った！ (自分のATK:${attacker.atk} / 相手ATK:${target.atk})`);
+          log("✨ " + attacker.name + " は " + target.name + " から能力を10奪った！ (自分のATK:" + attacker.atk + " / 相手ATK:" + target.atk + ")");
         }
         break;
 
@@ -490,12 +483,12 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
         attacker.hp += totalStolenHp;
         attacker.atk += totalStolenAtk;
 
-        log(`🌾 和辻哲郎の「風土改変」発動！ 両チームの状態異常を解除し、敵全体の能力を半減！`);
-        log(`✨ 敵から奪った HP:${totalStolenHp} / ATK:${totalStolenAtk} を和辻哲郎に加算！ (新HP:${attacker.hp} / 新ATK:${attacker.atk})`);
+        log("🌾 和辻哲郎の「風土改変」発動！ 両チームの状態異常を解除し、敵全体の能力を半減！");
+        log("✨ 敵から奪った HP:" + totalStolenHp + " / ATK:" + totalStolenAtk + " を和辻哲郎に加算！ (新HP:" + attacker.hp + " / 新ATK:" + attacker.atk + ")");
         break;
 
       case "festinger": // 認知的不協和 (展開ログ)
-        log(`✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！`);
+        log("✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！");
         break;
 
       case "erikson": // 発達段階巻き戻しビーム (ダイス0〜5)
@@ -503,7 +496,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
           const dice = Math.floor(Math.random() * 6);
           const reduced = Math.min(dice, target.atk);
           target.atk -= reduced;
-          log(`🎲 サイコロの目は [${dice}]！ ${target.name} の攻撃力を ${reduced} 低下させた！(残ATK:${target.atk})`);
+          log("🎲 サイコロの目は [" + dice + "]！ " + target.name + " の攻撃力を " + reduced + " 低下させた！(残ATK:" + target.atk + ")");
         }
         break;
 
@@ -522,10 +515,10 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   // 行動時パッシブ判定：カント(全体HP+10) / フェスティンガー(全体HP+5)
   if (attacker.id === "kant") {
     actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 10); });
-    log(`🌀 [${pName}] カントの「永遠平和のために」！ 味方全員のHPが 10 回復！`);
+    log("🌀 [" + pName + "] カントの「永遠平和のために」！ 味方全員のHPが 10 回復！");
   } else if (attacker.id === "festinger") {
     actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + 5); });
-    log(`🌀 [${pName}] フェスティンガーの「ストレス解消」！ 味方全員のHPが 5 回復！`);
+    log("🌀 [" + pName + "] フェスティンガーの「ストレス解消」！ 味方全員のHPが 5 回復！");
   }
 }
 
@@ -548,8 +541,8 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
 
   if (isReflected) {
     attacker.hp = Math.max(0, attacker.hp - finalDamage);
-    log(`🌀 ${target.name} の「間柄支配」！ ${finalDamage} ダメージが ${attacker.name} に反射された！`);
-    if (attacker.hp === 0) log(`☠️ ${attacker.name} は自滅した！`);
+    log("🌀 " + target.name + " の「間柄支配」！ " + finalDamage + " ダメージが " + attacker.name + " に反射された！");
+    if (attacker.hp === 0) log("☠️ " + attacker.name + " は自滅した！");
   } else {
     // ソクラテス「無知の知」（ダメージ半減判定）
     if (target.id === "socrates" && target.atk < attacker.atk) {
@@ -558,8 +551,8 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     }
 
     target.hp = Math.max(0, target.hp - finalDamage);
-    log(`💥 [${pName}] ${attacker.name} ➔ ${target.name} に ${finalDamage} ダメージ！${effText}`);
-    if (target.hp === 0) log(`☠️ ${target.name} は論破された！`);
+    log("💥 [" + pName + "] " + attacker.name + " ➔ " + target.name + " に " + finalDamage + " ダメージ！" + effText);
+    if (target.hp === 0) log("☠️ " + target.name + " は論破された！");
   }
 }
 
