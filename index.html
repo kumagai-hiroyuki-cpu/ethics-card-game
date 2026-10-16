@@ -88,4 +88,154 @@
       <div class="skill-desc" id="passive-desc">-</div>
     </div>
 
-    <button onclick="submitCommand('attack')">通常攻撃</button
+    <button onclick="submitCommand('attack')">通常攻撃</button>
+    <button onclick="submitCommand('skill')">スキル発動</button>
+  </div>
+</div>
+
+<div id="log" class="log-window"></div>
+
+<!-- カード拡大モーダル -->
+<div class="modal-overlay" id="card-modal" onclick="closeModal()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <img id="modal-img" class="modal-img" src="">
+    <div id="modal-title" class="modal-title"></div>
+    <div>
+      <span id="modal-rank" class="modal-badge"></span>
+      <span id="modal-type" class="modal-badge" style="background:#3498db;"></span>
+    </div>
+    <div class="modal-detail">
+      <strong style="color:#f39c12;">【アクティブスキル】</strong><br>
+      <span id="modal-skill-name" style="font-weight:bold;"></span>: <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
+      <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
+      <strong style="color:#e74c3c;">【パッシブスキル】</strong><br>
+      <span id="modal-passive-name" style="font-weight:bold;"></span>: <span id="modal-passive-desc" style="color:#bdc3c7;"></span>
+    </div>
+    <button onclick="closeModal()" style="margin-top:12px;">閉じる</button>
+  </div>
+</div>
+
+<script>
+// === Firebase接続設定 ===
+const firebaseConfig = {
+  apiKey: "AIzaSyCFr2e2VVWPV8JIf9cIRUh94fLxGFpNR1w",
+  authDomain: "ethics-card-game-4598a.firebaseapp.com",
+  databaseURL: "https://ethics-card-game-4598a-default-rtdb.firebaseio.com",
+  projectId: "ethics-card-game-4598a",
+  storageBucket: "ethics-card-game-4598a.firebasestorage.app",
+  messagingSenderId: "1094270378260",
+  appId: "1:1094270378260:web:aef75b9c4108f2bd472201",
+  measurementId: "G-R8SYD17150"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// === テスト用 6人の思想家データ ===
+const CARD_DATABASE = [
+  { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "問答法", skillDesc: "相手のATK-10、自分のATK+10", passiveName: "無知の知", passiveDesc: "自身のATKが相手より低い時、被ダメージ半減", image: "images/socrates.jpg" },
+  { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "善意志の行為", skillDesc: "相手単体に40ダメージ", passiveName: "永遠平和のために", passiveDesc: "自身の行動時、チーム全員のHPを10回復", image: "images/kant.jpg" },
+  { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "風土改変", skillDesc: "状態解除＆敵全体ステ半減＆削り分を和辻へ吸収加算", passiveName: "間柄支配", passiveDesc: "自身はBランク以下のダメージ反射。他日本キャラはCランク反射", image: "images/watsuji.jpg" },
+  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手のスキル発動を無効化する", passiveName: "ストレス解消", passiveDesc: "自身の行動時、チーム全員のHPを5回復", image: "images/festinger.jpg" },
+  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "発達段階巻き戻しビーム", skillDesc: "サイコロ(0〜5)の目だけ相手ATK低下", passiveName: "終わらない発達段階", passiveDesc: "ターン毎にATK上昇 (Sn=N(N+1)/2、最大21)", image: "images/erikson.jpg" },
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "母なる炎", skillDesc: "相手全体に5ダメージ", passiveName: "万物の流転", passiveDesc: "ターン終了時に自身のHPを5回復", image: "images/heraclitus.jpg" }
+];
+
+let myRole = "";
+let roomId = "";
+let roomRef = null;
+let gameState = null;
+
+function log(msg) {
+  const l = document.getElementById("log");
+  l.innerHTML = `<div>・${msg}</div>` + l.innerHTML;
+}
+
+function joinRoom(role) {
+  roomId = document.getElementById("room-id-input").value;
+  if (!roomId) return alert("部屋IDを入力してください！");
+  
+  myRole = role;
+  roomRef = db.ref("rooms/" + roomId);
+
+  if (role === 'p1') {
+    const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
+    const initialState = {
+      turnCount: 1,
+      p1: { cards: shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
+      p2: { cards: shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk})), cmd: null },
+      phase: "waiting_p2"
+    };
+    roomRef.set(initialState);
+    document.getElementById("connection-status").innerText = "P2の接続を待っています...";
+  } else {
+    document.getElementById("connection-status").innerText = "接続中...";
+  }
+
+  roomRef.on("value", (snapshot) => {
+    gameState = snapshot.val();
+    if (!gameState) return;
+    updateGameUI();
+  });
+}
+
+function updateGameUI() {
+  if (gameState.phase === "waiting_p2" && myRole === "p2") {
+    roomRef.update({ phase: "command_select" });
+  }
+
+  if (gameState.phase !== "waiting_p2") {
+    document.getElementById("setup-area").style.display = "none";
+    document.getElementById("game-area").style.display = "flex";
+    document.getElementById("action-area").style.display = "block";
+  }
+
+  document.getElementById("my-role").innerText = myRole.toUpperCase();
+  
+  const myData = gameState[myRole];
+  const enemyData = gameState[myRole === "p1" ? "p2" : "p1"];
+
+  renderCards("my-cards", myData.cards);
+  renderCards("enemy-cards", enemyData.cards);
+
+  updateSelectOptions(myData.cards, enemyData.cards);
+
+  if (myData.cmd) {
+    document.getElementById("command-inputs").style.display = "none";
+    document.getElementById("wait-msg").innerText = "⏳ 相手のコマンド決定を待っています...";
+  } else {
+    document.getElementById("command-inputs").style.display = "block";
+    document.getElementById("wait-msg").innerText = "⚔️ コマンドを選択してください";
+  }
+
+  if (gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
+    processBattlePhase();
+  }
+}
+
+function renderCards(containerId, cards) {
+  document.getElementById(containerId).innerHTML = cards.map((c, i) => {
+    const hpPercent = Math.max(0, (c.hp / c.maxHp) * 100);
+    return `
+      <div class="card-container ${c.hp === 0 ? 'defeated' : ''}" onclick="openModal('${c.id}')">
+        <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image';">
+        <div class="card-info">
+          <div class="card-name">${c.name}</div>
+          <div class="hp-bar">
+            <div class="hp-fill" style="width: ${hpPercent}%;"></div>
+            <div class="hp-text">${c.hp}/${c.maxHp}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateSelectOptions(myCards, enemyCards) {
+  const atkSelect = document.getElementById("attacker-select");
+  const tgtSelect = document.getElementById("target-select");
+  
+  const currentAtkVal = atkSelect.value;
+  const currentTgtVal = tgtSelect.value;
+
+  atkSelect.innerHTML = myCards
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk})</option
