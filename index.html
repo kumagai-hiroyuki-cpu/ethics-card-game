@@ -48,9 +48,9 @@
     .modal-detail { font-size: 0.85em; text-align: left; background: #1a252f; padding: 8px; border-radius: 6px; margin-top: 8px; }
   </style>
 
-  <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Firebase SDK (安定版v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
@@ -125,14 +125,14 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === テスト用 6人の思想家データ（属性・スキル追加） ===
+// === テスト用 6人の思想家データ（修正版） ===
 const CARD_DATABASE = [
   { id: "socrates", name: "ソクラテス", rank: "S", type: "源流", maxHp: 100, atk: 12, skillName: "無知の知", skillDesc: "相手に18の固定ダメージを与える", image: "images/socrates.jpg" },
   { id: "kant", name: "カント", rank: "S", type: "西洋", maxHp: 100, atk: 12, skillName: "定言命法", skillDesc: "相手に18の固定ダメージを与える", image: "images/kant.jpg" },
   { id: "watsuji", name: "和辻哲郎", rank: "S", type: "日本", maxHp: 100, atk: 12, skillName: "間柄的存在", skillDesc: "相手に18の固定ダメージを与える", image: "images/watsuji.jpg" },
-  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10の固定ダメージを与える", image: "images/festinger.jpg" },[cite: 1]
-  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14の固定ダメージを与える", image: "images/erikson.jpg" },[cite: 1]
-  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10の固定ダメージを与える", image: "images/heraclitus.jpg" }[cite: 1]
+  { id: "festinger", name: "フェスティンガー", rank: "C", type: "他者", maxHp: 50, atk: 6, skillName: "認知的不協和", skillDesc: "相手に10の固定ダメージを与える", image: "images/festinger.jpg" },
+  { id: "erikson", name: "エリクソン", rank: "A", type: "他者", maxHp: 80, atk: 9, skillName: "アイデンティティ", skillDesc: "相手に14の固定ダメージを与える", image: "images/erikson.jpg" },
+  { id: "heraclitus", name: "ヘラクレイトス", rank: "C", type: "源流", maxHp: 50, atk: 6, skillName: "万物は流転する", skillDesc: "相手に10の固定ダメージを与える", image: "images/heraclitus.jpg" }
 ];
 
 let myRole = "";
@@ -266,14 +266,10 @@ function submitCommand(type) {
 
 // === 相性計算関数 ===
 function getAttributeMultiplier(atkType, defType) {
-  // 源流・他者 ➔ 西洋 に強い
   if ((atkType === "源流" || atkType === "他者") && defType === "西洋") return 1.5;
-  // 西洋 ➔ 日本 に強い
   if (atkType === "西洋" && defType === "日本") return 1.5;
-  // 日本 ➔ 源流・他者 に強い
-  if (atkType === "日本" && (defType === "源流" || defType === "他者")) return 1.5;
-  
-  return 1.0; // 通常
+  if (atkType === "日本" && (atkType === "源流" || atkType === "他者")) return 1.5;
+  return 1.0;
 }
 
 function processBattlePhase() {
@@ -304,7 +300,6 @@ function applyAction(pName, actorObj, targetObj, cmd) {
     target.hp = Math.max(0, target.hp - damage);
     log(`💥 [${pName}] ${attacker.name}(${attacker.type}) の攻撃！ ${target.name}(${target.type}) に ${damage} ダメージ！${effText}`);
   } else {
-    // スキル攻撃（スキル基本値15）
     const damage = Math.floor(15 * mult);
     target.hp = Math.max(0, target.hp - damage);
     log(`🔥 [${pName}] ${attacker.name} のスキル「${attacker.skillName}」！ ${target.name} に ${damage} ダメージ！${effText}`);
