@@ -149,10 +149,16 @@ let myRole = "";
 let roomId = "";
 let roomRef = null;
 let gameState = null;
+let currentLogs = [];
 
-function log(msg) {
+function addLogMessage(msg) {
+  currentLogs.unshift(msg);
+}
+
+function renderLogs(logs) {
   const l = document.getElementById("log");
-  if (l) l.innerHTML = "<div>・" + msg + "</div>" + l.innerHTML;
+  if (!l || !logs) return;
+  l.innerHTML = logs.map(msg => "<div>・" + msg + "</div>").join("");
 }
 
 // === 絆（シナジー）判定関数 ===
@@ -181,7 +187,7 @@ function applyTeamSynergy(cards, teamName) {
       c.maxHp = Math.floor(c.maxHp * 1.2);
       c.hp = c.maxHp;
       c.synergyApplied = true;
-      log("🤝 【絆発動】[" + teamName + "] " + c.name + " の絆効果発動！ HPが1.2倍(" + c.maxHp + ")に強化！");
+      addLogMessage("🤝 【絆発動】[" + teamName + "] " + c.name + " の絆効果発動！ HPが1.2倍(" + c.maxHp + ")に強化！");
     }
   });
 }
@@ -198,6 +204,7 @@ function joinRoom(role) {
   const statusEl = document.getElementById("connection-status");
 
   if (role === 'p1') {
+    currentLogs = [];
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     const p1Cards = shuffled.slice(0, 3).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk, skillUsed: false}));
     const p2Cards = shuffled.slice(3, 6).map(c=>({...c, hp:c.maxHp, baseAtk:c.atk, skillUsed: false}));
@@ -209,7 +216,8 @@ function joinRoom(role) {
       turnCount: 1,
       p1: { cards: p1Cards, cmd: null },
       p2: { cards: p2Cards, cmd: null },
-      phase: "waiting_p2"
+      phase: "waiting_p2",
+      logs: currentLogs
     };
     roomRef.set(initialState)
       .then(() => {
@@ -231,6 +239,11 @@ function joinRoom(role) {
 
 function updateGameUI() {
   if (!gameState) return;
+
+  if (gameState.logs) {
+    currentLogs = gameState.logs;
+    renderLogs(gameState.logs);
+  }
 
   if (gameState.phase === "waiting_p2" && myRole === "p2") {
     roomRef.update({ phase: "command_select" });
@@ -322,7 +335,6 @@ function updateSkillDisplay() {
     document.getElementById("passive-name").innerText = selectedCard.passiveName || "-";
     document.getElementById("passive-desc").innerText = selectedCard.passiveDesc || "-";
 
-    // activeVal === 0 または 既に1回スキル使用済みの場合はボタン無効化
     if (selectedCard.activeVal === 0) {
       skillBtn.disabled = true;
       skillBtn.title = "アクティブスキルポイントが0のため発動できません";
@@ -360,7 +372,7 @@ function getAttributeMultiplier(atkType, defType) {
 }
 
 function processBattlePhase() {
-  log("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
+  addLogMessage("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
   
   applyTurnStartPassives(gameState.p1, gameState.turnCount);
   applyTurnStartPassives(gameState.p2, gameState.turnCount);
@@ -375,6 +387,7 @@ function processBattlePhase() {
   gameState.p1.cmd = null;
   gameState.p2.cmd = null;
   gameState.phase = "command_select";
+  gameState.logs = currentLogs;
 
   roomRef.set(gameState);
 }
@@ -395,7 +408,7 @@ function applyTurnEndPassives(pName, playerObj) {
     if (c.id === "heraclitus" && c.hp > 0 && c.hp < c.maxHp && c.passiveVal > 0) {
       const healAmt = c.passiveVal;
       c.hp = Math.min(c.maxHp, c.hp + healAmt);
-      log("🌀 [" + pName + "] ヘラクレイトスの「万物の流転」！ HPが " + healAmt + " 回復！");
+      addLogMessage("🌀 [" + pName + "] ヘラクレイトスの「万物の流転」！ HPが " + healAmt + " 回復！");
     }
   });
 }
@@ -414,24 +427,22 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
       executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
     }
   } else {
-    // 1戦闘中1回のみ制限フラグチェック
     if (attacker.activeVal === 0 || attacker.skillUsed) {
-      log("⚠️ [" + pName + "] " + attacker.name + " はスキルを発動できない！");
+      addLogMessage("⚠️ [" + pName + "] " + attacker.name + " はスキルを発動できない！");
       return;
     }
 
-    // スキル使用済みフラグをオンに設定
     attacker.skillUsed = true;
 
     if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
       const oppAttacker = targetObj.cards[oppCmd.attacker];
       if (oppAttacker.id === 'festinger' && oppAttacker.hp > 0) {
-        log("🚫 [" + pName + "] " + attacker.name + " のスキルはフェスティンガーの「認知的不協和」により無効化された！");
+        addLogMessage("🚫 [" + pName + "] " + attacker.name + " のスキルはフェスティンガーの「認知的不協和」により無効化された！");
         return;
       }
     }
 
-    log("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！(1回限り使用済)");
+    addLogMessage("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」！(1回限り使用済)");
 
     switch (attacker.id) {
       case "socrates":
@@ -439,7 +450,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
           const stealAmt = Math.min(attacker.activeVal, target.atk);
           target.atk -= stealAmt;
           attacker.atk += stealAmt;
-          log("✨ " + attacker.name + " は " + target.name + " から能力を" + stealAmt + "奪った！ (自分のATK:" + attacker.atk + " / 相手ATK:" + target.atk + ")");
+          addLogMessage("✨ " + attacker.name + " は " + target.name + " から能力を" + stealAmt + "奪った！ (自分のATK:" + attacker.atk + " / 相手ATK:" + target.atk + ")");
         }
         break;
 
@@ -473,12 +484,12 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
         attacker.hp += totalStolenHp;
         attacker.atk += totalStolenAtk;
 
-        log("🌾 和辻哲郎の「風土改変」発動！ 両チームの状態異常を解除し、敵全体の能力を半減！");
-        log("✨ 敵から奪った HP:" + totalStolenHp + " / ATK:" + totalStolenAtk + " を和辻哲郎に加算！");
+        addLogMessage("🌾 和辻哲郎の「風土改変」発動！ 両チームの状態異常を解除し、敵全体の能力を半減！");
+        addLogMessage("✨ 敵から奪った HP:" + totalStolenHp + " / ATK:" + totalStolenAtk + " を和辻哲郎に加算！");
         break;
 
       case "festinger":
-        log("✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！");
+        addLogMessage("✨ フェスティンガーは「認知的不協和」を展開！ このターンの敵スキルを牽制！");
         break;
 
       case "erikson":
@@ -486,7 +497,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
           const dice = Math.floor(Math.random() * 6);
           const reduced = Math.min(dice, target.atk);
           target.atk -= reduced;
-          log("🎲 サイコロの目は [" + dice + "]！ " + target.name + " の攻撃力を " + reduced + " 低下させた！(残ATK:" + target.atk + ")");
+          addLogMessage("🎲 サイコロの目は [" + dice + "]！ " + target.name + " の攻撃力を " + reduced + " 低下させた！(残ATK:" + target.atk + ")");
         }
         break;
 
@@ -507,7 +518,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     if (attacker.id === "kant" || attacker.id === "festinger") {
       const healAmt = attacker.passiveVal;
       actorObj.cards.forEach(c => { if(c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + healAmt); });
-      log("🌀 [" + pName + "] " + attacker.name + " の「" + attacker.passiveName + "」！ 味方全員のHPが " + healAmt + " 回復！");
+      addLogMessage("🌀 [" + pName + "] " + attacker.name + " の「" + attacker.passiveName + "」！ 味方全員のHPが " + healAmt + " 回復！");
     }
   }
 }
@@ -529,8 +540,8 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
 
   if (isReflected) {
     attacker.hp = Math.max(0, attacker.hp - finalDamage);
-    log("🌀 " + target.name + " の「間柄支配」！ " + finalDamage + " ダメージが " + attacker.name + " に反射された！");
-    if (attacker.hp === 0) log("☠️ " + attacker.name + " は自滅した！");
+    addLogMessage("🌀 " + target.name + " の「間柄支配」！ " + finalDamage + " ダメージが " + attacker.name + " に反射された！");
+    if (attacker.hp === 0) addLogMessage("☠️ " + attacker.name + " は自滅した！");
   } else {
     if (target.id === "socrates" && target.atk < attacker.atk) {
       finalDamage = Math.floor(finalDamage / 2);
@@ -538,8 +549,8 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     }
 
     target.hp = Math.max(0, target.hp - finalDamage);
-    log("💥 [" + pName + "] " + attacker.name + " ➔ " + target.name + " に " + finalDamage + " ダメージ！" + effText);
-    if (target.hp === 0) log("☠️ " + target.name + " は論破された！");
+    addLogMessage("💥 [" + pName + "] " + attacker.name + " ➔ " + target.name + " に " + finalDamage + " ダメージ！" + effText);
+    if (target.hp === 0) addLogMessage("☠️ " + target.name + " は論破された！");
   }
 }
 
