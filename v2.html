@@ -288,6 +288,9 @@ function rollDice(sides = 6) {
 fetch('cards.json')
   .then(response => response.json())
   .then(data => {
+ data.forEach(card => {
+        initializeCardState(card);
+      });
     CARD_DATABASE = data;
     console.log("思想家データ全 " + CARD_DATABASE.length + " 件の読み込みが完了しました！");
   })
