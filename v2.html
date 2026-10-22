@@ -57,7 +57,24 @@
 <body>
 
 <h1>📜 倫理 思想家カードバトル (3vs3)</h1>
-
+<!-- ========================================== -->
+<!-- バトルテスト用UI（あとで消せます） -->
+<!-- ========================================== -->
+<div style="border: 2px solid #333; padding: 15px; margin: 20px; background-color: #f9f9f9;">
+  <h3>🛠 エンジン動作テスト</h3>
+  <p>
+    <strong>攻撃側:</strong> <span id="attacker-name">読込中...</span> 
+    (HP: <span id="attacker-hp">--</span>)
+  </p>
+  <p>
+    <strong>防御側:</strong> <span id="defender-name">読込中...</span> 
+    (HP: <span id="defender-hp">--</span>)
+  </p>
+  <button id="test-attack-btn" style="padding: 10px 20px; cursor: pointer;">
+    ⚔️ ダメージスキル発動（威力10）
+  </button>
+  <p id="battle-log" style="color: #d32f2f; font-weight: bold; margin-top: 10px;"></p>
+</div>
 <div class="room-setup" id="setup-area">
   <div style="margin-bottom: 12px;">
     <button class="cpu-btn" onclick="startCpuBattle()">🤖 コンピュータと対戦 (一人プレイ)</button>
