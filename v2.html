@@ -399,6 +399,11 @@ fetch('cards.json')
         initializeCardState(card);
       });
     CARD_DATABASE = data;
+  
+    testAttacker = CARD_DATABASE[0]; // 1人目を攻撃側にセット
+    testDefender = CARD_DATABASE[1]; // 2人目を防御側にセット
+    updateBattleUI(); // 画面に名前とHPを表示
+
     console.log("思想家データ全 " + CARD_DATABASE.length + " 件の読み込みが完了しました！");
   })
   .catch(error => console.error("cards.json 読み込みエラー:", error));
