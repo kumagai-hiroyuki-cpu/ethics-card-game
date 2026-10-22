@@ -142,6 +142,149 @@ const db = firebase.database();
 
 let CARD_DATABASE = [];
 
+// ==========================================
+// 思想家カードゲーム バトル基礎関数群
+// ==========================================
+
+// ------------------------------------------
+// 1. 初期化・フラグ管理（ステップ3）
+// ------------------------------------------
+function initializeCardState(card) {
+  card.currentHP = card.maxHP || card.hp; // スプレッドシートのHPを最大HPとする
+  card.isDead = false;
+  
+  // 防御・回避系
+  card.isInvincible = false;
+  card.evadeRate = 0;
+  card.damageReduction = 0;
+  card.nullifyRank = null;
+
+  // 復活・身代わり・回復系
+  card.hasGuts = false;
+  card.hasRevive = false;
+  card.coverTarget = null;
+  card.regenAmount = 0;
+
+  // 状態異常系（ステップ4）
+  card.stunTurns = 0;
+  card.silenceTurns = 0;
+
+  // バフ・デバフ系
+  card.attackBuff = 0;
+  card.defenseBuff = 0;
+}
+
+// ------------------------------------------
+// 2. ダメージ・回復・バフ処理（ステップ1・3・4統合）
+// ------------------------------------------
+function applyDamage(attacker, defender, baseDamage) {
+  // ① 身代わり判定
+  let actualTarget = defender;
+  if (defender.coverTarget && !defender.coverTarget.isDead) {
+    actualTarget = defender.coverTarget;
+    console.log(`${actualTarget.name}がダメージを肩代わり！`);
+  }
+
+  // ② 特定ランク無効判定
+  if (actualTarget.nullifyRank && attacker.rank !== actualTarget.nullifyRank) return 0;
+
+  // ③ 無敵・回避判定
+  if (actualTarget.isInvincible) return 0;
+  if (actualTarget.evadeRate > 0 && Math.random() < actualTarget.evadeRate) {
+    console.log(`${actualTarget.name}は攻撃を回避した！`);
+    return 0;
+  }
+
+  // ④ ダメージ計算（基本ダメージ＋バフ補正－軽減率）
+  let rawDamage = Math.max(0, baseDamage + (attacker.attackBuff || 0) - (actualTarget.defenseBuff || 0));
+  let finalDamage = Math.floor(rawDamage * (1 - actualTarget.damageReduction));
+  
+  actualTarget.currentHP -= finalDamage;
+
+  // ⑤ 食いしばり・退場判定
+  if (actualTarget.currentHP <= 0) {
+    if (actualTarget.hasGuts) {
+      actualTarget.currentHP = 1;
+      actualTarget.hasGuts = false;
+    } else {
+      actualTarget.currentHP = 0;
+      actualTarget.isDead = true;
+    }
+  }
+  return finalDamage;
+}
+
+function dealTrueDamage(target, amount) { // 貫通ダメージ
+  target.currentHP -= amount;
+  if (target.currentHP <= 0) target.isDead = true;
+}
+
+function executeInstantKill(target) { // 即死処理
+  target.currentHP = 0;
+  target.hasGuts = false;
+  target.isDead = true;
+}
+
+function applyHeal(target, amount, allowOverflow = false) { // 回復処理
+  if (target.currentHP <= 0 && !target.isDead) return 0;
+  target.currentHP += amount;
+  if (!allowOverflow && target.currentHP > target.maxHP) {
+    target.currentHP = target.maxHP;
+  }
+}
+
+function applyBuff(target, statType, amount) { // バフ処理
+  if (statType === 'attack') target.attackBuff += amount;
+  else if (statType === 'defense') target.defenseBuff += amount;
+}
+
+function clearAllBuffs(target) { // バフ・状態異常リセット
+  target.attackBuff = 0;
+  target.defenseBuff = 0;
+  target.isInvincible = false;
+  target.evadeRate = 0;
+  target.stunTurns = 0;
+}
+
+// ------------------------------------------
+// 3. 属性（タグ）判定処理（ステップ2）
+// ------------------------------------------
+function hasTag(card, tagName) {
+  return card.synergyTags && card.synergyTags.includes(tagName);
+}
+
+function countTagInParty(party, tagName) {
+  return party.filter(card => !card.isDead && hasTag(card, tagName)).length;
+}
+
+function applyEffectToTag(party, tagName, effectType, amount) {
+  party.forEach(card => {
+    if (!card.isDead && hasTag(card, tagName)) {
+      if (effectType === 'hp') applyHeal(card, amount);
+      else if (effectType === 'attack') applyBuff(card, 'attack', amount);
+    }
+  });
+}
+
+// ------------------------------------------
+// 4. システム判定・ダイス（ステップ4）
+// ------------------------------------------
+function canAct(card) {
+  if (card.stunTurns > 0) {
+    card.stunTurns--;
+    return false;
+  }
+  return true;
+}
+
+function rollDice(sides = 6) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+
+// ==========================================
+// 基礎関数群 ここまで
+// ==========================================
+ 
 fetch('cards.json')
   .then(response => response.json())
   .then(data => {
