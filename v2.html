@@ -355,6 +355,42 @@ function executeSpecialSkill(attacker, targetParty, skillData) {
     console.log(`ダイスの目は${dice}！`);
   }
 }
+
+// ==========================================
+// 6. UIテスト用連携コード
+// ==========================================
+let testAttacker, testDefender;
+
+// 画面のHP表示を更新する関数
+function updateBattleUI() {
+  if (!testAttacker || !testDefender) return;
+  document.getElementById('attacker-name').innerText = testAttacker.name;
+  document.getElementById('attacker-hp').innerText = testAttacker.currentHP;
+  document.getElementById('defender-name').innerText = testDefender.name;
+  document.getElementById('defender-hp').innerText = Math.max(0, testDefender.currentHP);
+}
+
+// ボタンが押されたときの処理
+document.getElementById('test-attack-btn').addEventListener('click', () => {
+  if (!testAttacker || !testDefender) {
+    alert("データを読み込んでいます。");
+    return;
+  }
+
+  // テスト用の仮スキルデータ（威力10のダメージ）
+  let dummySkill = { type: 'damage', value: 10 };
+
+  // ★ここで完成したエンジンを呼び出す！
+  executeSkill(testAttacker, [testDefender], dummySkill);
+
+  // 画面の表示を最新のHPに更新
+  updateBattleUI();
+
+  // ログを表示
+  let logText = `${testAttacker.name}の攻撃！ ${testDefender.name}にダメージ！`;
+  if (testDefender.isDead) logText += ` ${testDefender.name}は倒れた！`;
+  document.getElementById('battle-log').innerText = logText;
+});
   
 fetch('cards.json')
   .then(response => response.json())
