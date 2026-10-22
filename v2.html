@@ -284,7 +284,61 @@ function rollDice(sides = 6) {
 // ==========================================
 // 基礎関数群 ここまで
 // ==========================================
- 
+
+// ==========================================
+// 5. スキルのルーティング（振り分け）関数
+// ==========================================
+function executeSkill(attacker, targetParty, skillData) {
+  if (!canAct(attacker)) {
+    console.log(`${attacker.name}は動けない！`);
+    return;
+  }
+
+  // ※仮置き：ターゲットは相手パーティーの先頭
+  let target = targetParty[0];
+
+  switch (skillData.type) {
+    case 'damage':
+      console.log(`${attacker.name}の攻撃！`);
+      applyDamage(attacker, target, skillData.value);
+      break;
+    case 'heal':
+      console.log(`${attacker.name}の回復！`);
+      applyHeal(attacker, skillData.value);
+      break;
+    case 'buff':
+      console.log(`${attacker.name}の強化！`);
+      applyBuff(attacker, 'attack', skillData.value);
+      break;
+    case 'debuff':
+      console.log(`${attacker.name}の妨害！`);
+      applyBuff(target, 'attack', -skillData.value);
+      break;
+    case 'special':
+      console.log(`${attacker.name}の特殊スキル発動！`);
+      executeSpecialSkill(attacker, targetParty, skillData);
+      break;
+    default:
+      console.log("効果がない、またはパッシブスキルです");
+      break;
+  }
+}
+
+// ------------------------------------------
+// 特殊スキル（special）専用の分岐処理
+// ------------------------------------------
+function executeSpecialSkill(attacker, targetParty, skillData) {
+  let target = targetParty[0];
+
+  if (attacker.name === "近松門左衛門") {
+    executeInstantKill(target);
+    executeInstantKill(attacker);
+  } else if (attacker.name === "マズロー") {
+    let dice = rollDice(6);
+    console.log(`ダイスの目は${dice}！`);
+  }
+}
+  
 fetch('cards.json')
   .then(response => response.json())
   .then(data => {
