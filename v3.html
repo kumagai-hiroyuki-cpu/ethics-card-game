@@ -625,11 +625,7 @@ function updateSkillDisplay() {
       skillBtn.disabled = true;
       skillBtn.title = "アクティブスキルポイントが0のため発動できません";
       if (statusEl) statusEl.innerText = "";
-    } else if (selectedCard.skillUsed) {
-      skillBtn.disabled = true;
-      skillBtn.title = "アクティブスキルは1戦闘につき1回までです";
-      if (statusEl) statusEl.innerText = "(1回のみ使用済み)";
-    } else {
+   } else {
       skillBtn.disabled = false;
       skillBtn.title = "";
       if (statusEl) statusEl.innerText = "";
