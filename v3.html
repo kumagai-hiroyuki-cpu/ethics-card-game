@@ -766,12 +766,10 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     }
   } else {
     const activePt = attacker.activeVal || 0;
-    if (activePt === 0 || attacker.skillUsed) {
+    if (activePt === 0) {
       addLogMessage("⚠️ [" + pName + "] " + attacker.name + " はスキルを発動できない！");
       return;
     }
-
-    attacker.skillUsed = true;
 
     const activeRate = Math.min(100, Math.floor((activePt / 50) * 100));
     const rand = Math.floor(Math.random() * 100);
