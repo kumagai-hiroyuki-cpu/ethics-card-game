@@ -756,7 +756,11 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
 
   const attacker = actorObj.cards[cmd.attacker];
   if (attacker.hp <= 0) return;
-
+　if (attacker.isStunned) {
+      addLogMessage(`💤 [${pName}] ${attacker.name} は罪を悔い改めており、行動できない！`);
+      attacker.isStunned = false; // 1回休んだら解除
+      return;
+    }
   const tgtIdx = getRandomTarget(targetObj.cards);
   const target = tgtIdx !== null ? targetObj.cards[tgtIdx] : null;
 
