@@ -750,7 +750,36 @@ function applyTurnEndPassives(pName, playerObj) {
     }
   });
 }
+function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
+  if (!target || target.hp <= 0) return;
 
+  const mult = getAttributeMultiplier(attacker.type, target.type);
+  let finalDamage = Math.floor(baseDmg * mult);
+
+  if (attacker.atkBuff) {
+    finalDamage *= 2;
+    attacker.atkBuff = false; // 攻撃したら解除
+    addLogMessage(`💨 ${attacker.name} の攻撃力が2倍にアップしている！`);
+  }
+
+  if (target.defenseBuff) {
+    finalDamage = Math.floor(finalDamage / 2);
+    target.defenseBuff = false; // 防いだら解除
+    addLogMessage(`🌍 ${target.name} は土の盾でダメージを半減した！`);
+  }
+
+  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
+  
+ target.hp -= finalDamage;
+  if (target.hp < 0) target.hp = 0; 
+
+  addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
+
+  if (target.hp === 0) {
+    addLogMessage(`💀 ${target.name} は倒れた！`);
+  }
+}
+  
 function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
 
