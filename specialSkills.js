@@ -756,3 +756,423 @@ const specialSkillLogic = {
       addLogMessage(`☭ [${pName}] ${attacker.name} の「階級闘争」！ 敵陣営に搾取すべき超過した富（バフ）は存在しなかった。`);
     }
   },
+"ippen": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 踊り念仏: どこかへ行くため1ターン行動不能（1回休み）
+    attacker.isStunned = true;
+    addLogMessage(`📿 [${pName}] ${attacker.name} の「踊り念仏」！ 歓喜の踊りとともにどこかへ去り、1ターン行動不能になった！`);
+  },
+
+  "ito_jinsai": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 「論語」「孟子」: 孔子・孟子がいればHPを増加
+    let affected = false;
+    [actorObj, targetObj].forEach(side => {
+      side.cards.forEach(c => {
+        if (c.hp > 0 && (c.id === "confucius" || c.id === "mencius")) {
+          c.hp += 25;
+          affected = true;
+        }
+      });
+    });
+    if (affected) {
+      addLogMessage(`📖 [${pName}] ${attacker.name} の「古義学」！ 聖賢たる孔子・孟子の徳が称えられ、二人のHPが25増加した！`);
+    } else {
+      addLogMessage(`📖 [${pName}] ${attacker.name} のスキル発動！ しかし場に孔子も孟子も存在しなかった。`);
+    }
+  },
+
+  "ihara_saikaku": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 大晦日チェック 『世間胸算用』: 最高HP思想家のHPを半分削る(四捨五入)
+    let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+    if (aliveEnemies.length > 0) {
+      let maxHpEnemy = aliveEnemies.reduce((a, b) => a.hp > b.hp ? a : b);
+      const cutDmg = Math.round(maxHpEnemy.hp / 2);
+      maxHpEnemy.hp -= cutDmg;
+      if (maxHpEnemy.hp < 0) maxHpEnemy.hp = 0;
+      addLogMessage(`💰 [${pName}] ${attacker.name} の「世間胸算用」！ 大晦日の厳しい取り立てにより、${maxHpEnemy.name} のHPが半分（${cutDmg}削削）になった！`);
+    }
+  },
+
+  "uchimura_kanzo": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 非戦論: 次の攻撃を無効化
+    attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
+    addLogMessage(`🕊️ [${pName}] ${attacker.name} の「非戦論」！ 刀を捨て平和を主張し、次受ける攻撃を完全無効化する状態になった！`);
+  },
+
+  "kamo_no_mabuchi": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 国学: 非日本人思想家からステータス吸収 ＋ 本居宣長と同席でさらにATK+5
+    const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga"];
+    let absorbedAtk = 0;
+    
+    targetObj.cards.forEach(c => {
+      if (c.hp > 0 && !japaneseIds.includes(c.id)) {
+        c.hp = Math.max(0, c.hp - 5);
+        c.atk = Math.max(0, c.atk - 5);
+        absorbedAtk += 5;
+      }
+    });
+
+    attacker.atk += absorbedAtk;
+    let extraText = "";
+
+    // 本居宣長の同席チェック
+    let hasNorinaga = actorObj.cards.some(c => c.hp > 0 && c.id === "motoori_norinaga");
+    if (hasNorinaga) {
+      attacker.atk += 5;
+      extraText = " さらに本居宣長と同席のため攻撃力+5！";
+    }
+
+    addLogMessage(`🌸 [${pName}] ${attacker.name} の「国学」！ 海外の思想家から力を吸収（ATK+${absorbedAtk}）！${extraText}`);
+  },
+
+  "kitamura_tokoku": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 想世界の完成: ダイス1で最大HP敵を即死。出目に関わらず自身は退場(自滅)
+    const dice = Math.floor(Math.random() * 6) + 1;
+    let resultMsg = "";
+    
+    if (dice === 1) {
+      let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+      if (aliveEnemies.length > 0) {
+        let targetEnemy = aliveEnemies.reduce((a, b) => a.hp > b.hp ? a : b);
+        targetEnemy.hp = 0;
+        resultMsg = ` 出目【1】！ 理想の想世界が完成し、${targetEnemy.name} を道連れに即死させた！`;
+      }
+    } else {
+      resultMsg = ` 出目【${dice}】... 理想は現実を穿てなかった。`;
+    }
+
+    attacker.hp = 0; // 北村透谷自身は確実に退場
+    addLogMessage(`❄️ [${pName}] ${attacker.name} の「想世界の完成」！${resultMsg} (透谷は命を絶ち退場した)`);
+  },
+
+  "kukai": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 即身成仏: 復活の加護を味方全体に付与
+    actorObj.cards.forEach(c => {
+      if (c.hp > 0) c.canKukaiRevive = true;
+    });
+    addLogMessage(`☸️ [${pName}] ${attacker.name} の「即身成仏」！ 味方全体に密教の加護が与えられ、倒れた際一度だけHP半分で復活する権能を得た！`);
+  },
+
+  "kotoku_shusui": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 直接行動: 相手の防御解除 ＆ 攻撃力を直接奪う
+    target.atkBuff = false;
+    target.defenseBuff = false;
+    const stolenAtk = Math.min(target.atk, 15);
+    target.atk -= stolenAtk;
+    attacker.atk += stolenAtk;
+    addLogMessage(`🔥 [${pName}] ${attacker.name} の「直接行動」！ 議会を通さぬ革命的猛攻により、${target.name} の強打を封じ攻撃力を ${stolenAtk} 奪取した！`);
+  },
+
+  "kobayashi_hideo": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 批評の眼: 敵全体のバフ解除 ＆ 攻撃力大幅ダウン
+    if (targetObj && targetObj.cards) {
+      targetObj.cards.forEach(enemy => {
+        if (enemy.hp > 0) {
+          enemy.atkBuff = false;
+          enemy.defenseBuff = false;
+          enemy.atk = Math.max(0, enemy.atk - 15);
+        }
+      });
+    }
+    addLogMessage(`👓 [${pName}] ${attacker.name} の「批評の眼」！ 敵全カードの本質を冷徹に見抜き、全強化を解除し攻撃力を15低下させた！`);
+  },
+
+  "saicho": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 一切衆生悉有仏性: 敵全体に15ダメージを与え、自陣に報復のバフをかける
+    const dmg = 15;
+    if (targetObj && targetObj.cards) {
+      targetObj.cards.forEach(enemy => {
+        if (enemy.hp > 0) {
+          enemy.hp -= dmg;
+          if (enemy.hp < 0) enemy.hp = 0;
+        }
+      });
+    }
+    actorObj.cards.forEach(c => {
+      if (c.hp > 0) c.hasSaichoBuff = true;
+    });
+    addLogMessage(`🔔 [${pName}] ${attacker.name} の「一切衆生悉有仏性」！ 敵全体に ${dmg} ダメージを与え、万物が仏性を持つ慈悲の導きを付与した！`);
+  },
+"sakaguchi_ango": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 堕落論: 敵味方全体のバフ・デバフをすべてリセット
+    [actorObj, targetObj].forEach(side => {
+      side.cards.forEach(c => {
+        c.atkBuff = false;
+        c.defenseBuff = false;
+        c.nullifyCount = 0;
+        c.isStunned = false;
+      });
+    });
+    addLogMessage(`🍷 [${pName}] ${attacker.name} の「堕落論」！ 生きよ、堕ちよ！ 敵味方すべてのバフ・デバフがリセットされた！`);
+  },
+
+  "sakuma_shozan": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 和魂洋才: 自身を強化し合成大ダメージ
+    attacker.atk += 15;
+    const dmg = attacker.atk;
+    target.hp -= dmg;
+    if (target.hp < 0) target.hp = 0;
+    addLogMessage(`⚙️ [${pName}] ${attacker.name} の「和魂洋才」！ 東洋の精神と西洋の技術を融合し、${target.name} に ${dmg} ダメージ！`);
+  },
+
+  "shotoku_taishi": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 憲法十七条: 「和」により次の攻撃を回避
+    attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
+    addLogMessage(`📜 [${pName}] ${attacker.name} の「憲法十七条」！ 「以和為貴」の教えにより、次の攻撃を1回完全回避する！`);
+  },
+
+  "takano_choei": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 戊戌夢物語: 絶対回避(無効化バリア2回分)
+    attacker.nullifyCount = (attacker.nullifyCount || 0) + 2;
+    addLogMessage(`🕯️ [${pName}] ${attacker.name} の「戊戌夢物語」！ 卓越した脱獄の知恵により身を隠し、敵の攻撃を2回まで絶対回避！`);
+  },
+
+  "chikamatsu_monzaemon": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 曽根崎心中: バリア等を無視して対象を確殺し、自身も死亡する
+    target.nullifyCount = 0; // バリア破壊
+    target.defenseBuff = false;
+    target.hp = 0; // 相手を確殺
+    attacker.hp = 0; // 自身も死亡
+    addLogMessage(`🎭 [${pName}] ${attacker.name} の「曽根崎心中」！ 絆の極致により ${target.name} を道連れにし、共に命を絶った...！`);
+  },
+
+  "dogen": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 身心脱落: 2回分無敵状態を得て攻撃するが、反動で2ターン行動不能
+    attacker.nullifyCount = (attacker.nullifyCount || 0) + 2;
+    const dmg = attacker.atk + 20;
+    target.hp -= dmg;
+    if (target.hp < 0) target.hp = 0;
+    attacker.isStunned = true; // 反動による瞑想・身心脱落状態
+    addLogMessage(`🧘 [${pName}] ${attacker.name} の「身心脱落」！ 執着を捨て去り ${dmg} ダメージ＆2回無敵を得たが、反動で深き沈黙（行動不能）に入った！`);
+  },
+
+  "tokutomi_soho": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 平民主義: 貴族・権力者出身の相手を特効攻撃
+    const nobleIds = ["platon", "aristoteles", "hegel", "descartes", "nietzsche", "hobbes"];
+    let nobleEnemies = targetObj.cards.filter(c => c.hp > 0 && nobleIds.includes(c.id));
+    
+    if (nobleEnemies.length > 0) {
+      let nobleTarget = nobleEnemies[0];
+      const dmg = attacker.atk * 2;
+      nobleTarget.hp -= dmg;
+      if (nobleTarget.hp < 0) nobleTarget.hp = 0;
+      addLogMessage(`📢 [${pName}] ${attacker.name} の「平民主義」！ 特権階級たる ${nobleTarget.name} を激しく批判し、${dmg} の大ダメージ！`);
+    } else {
+      const dmg = attacker.atk;
+      target.hp -= dmg;
+      if (target.hp < 0) target.hp = 0;
+      addLogMessage(`📢 [${pName}] ${attacker.name} の「平民主義」！ ${target.name} に ${dmg} ダメージを与えた！`);
+    }
+  },
+
+  "tominaga_nakamoto": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 儒教批判: 孔子が居る場合、狙い撃ちダメージ
+    let confucius = targetObj.cards.find(c => c.hp > 0 && c.id === "confucius");
+    if (confucius) {
+      const dmg = 45;
+      confucius.hp -= dmg;
+      if (confucius.hp < 0) confucius.hp = 0;
+      addLogMessage(`📜 [${pName}] ${attacker.name} の「出定後語（儒教批判）」！ 敵陣の孔子へ痛烈な論破を行い、${dmg} ダメージを与えた！`);
+    } else {
+      addLogMessage(`📜 [${pName}] ${attacker.name} は儒教批判を展開したが、敵陣に孔子はいなかった。`);
+    }
+  },
+
+  "nakae_chomin": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 自由民権運動: 独裁・絶対王政の思想家を即死(HP0)にする
+    const tyrantIds = ["hobbes", "machiavelli", "han_feizi"]; // 該当する思想家ID
+    let tyrantEnemies = targetObj.cards.filter(c => c.hp > 0 && tyrantIds.includes(c.id));
+    
+    if (tyrantEnemies.length > 0) {
+      let tyrant = tyrantEnemies[0];
+      tyrant.hp = 0;
+      addLogMessage(`🔔 [${pName}] ${attacker.name} の「東洋のルソー（自由民権運動）」！ 専制政治を唱える ${tyrant.name} を打倒し、即死（HP0）せしめた！`);
+    } else {
+      const dmg = 25;
+      target.hp -= dmg;
+      if (target.hp < 0) target.hp = 0;
+      addLogMessage(`🔔 [${pName}] ${attacker.name} の「自由民権運動」！ 民衆の権利を訴え、${target.name} に ${dmg} ダメージ！`);
+    }
+  },
+"natsume_soseki": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 精神的に向上心のない奴は馬鹿だ: 名前に「K/k」が付くカードに特効
+    let kTargets = targetObj.cards.filter(c => c.hp > 0 && (c.name.includes("K") || c.name.includes("k") || c.id.includes("k")));
+    if (kTargets.length > 0) {
+      kTargets.forEach(c => {
+        c.hp -= 40;
+        if (c.hp < 0) c.hp = 0;
+      });
+      addLogMessage(`📖 [${pName}] ${attacker.name} の「精神的に向上心のない奴は馬鹿だ」！ Kの影を持つものたちに 40 ダメージ！（漱石は無傷）`);
+    } else {
+      const dmg = attacker.atk;
+      target.hp -= dmg;
+      if (target.hp < 0) target.hp = 0;
+      addLogMessage(`📖 [${pName}] ${attacker.name} の「こころ」！ ${target.name} に ${dmg} ダメージ！`);
+    }
+  },
+
+  "nishida_kitaro": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 主客未分: 近代西洋思想家のHPを下げる
+    const modernWesternIds = ["kant", "hegel", "nietzsche", "sartre", "husserl", "heidegger"];
+    targetObj.cards.forEach(c => {
+      if (c.hp > 0 && modernWesternIds.includes(c.id)) {
+        c.hp = Math.max(0, c.hp - 20);
+      }
+    });
+    addLogMessage(`🧘 [${pName}] ${attacker.name} の「主客未分」！ 主語と述語の対立を超克し、敵陣の近代西洋思想家のHPを20低下させた！`);
+  },
+
+  "ninomiya_sontoku": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 分度と推譲: 自身が倒れた時/瀕死の時に余力を味方に譲渡
+    let aliveAllies = actorObj.cards.filter(c => c.hp > 0 && c !== attacker);
+    if (aliveAllies.length > 0) {
+      const shareAtk = Math.floor(attacker.atk / aliveAllies.length);
+      aliveAllies.forEach(a => a.atk += shareAtk);
+      addLogMessage(`🌾 [${pName}] ${attacker.name} の「積小為大・推譲」！ 自身の能力値（ATK）を味方に譲渡（各+${shareAtk}）した！`);
+    }
+  },
+
+  "fukuzawa_yukichi": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 天は人の上に人を造らず...: 敵味方全員のHPを平均化する
+    let allCards = [];
+    [actorObj, targetObj].forEach(side => {
+      side.cards.forEach(c => { if (c.hp > 0) allCards.push(c); });
+    });
+    
+    if (allCards.length > 0) {
+      let totalHp = allCards.reduce((sum, c) => sum + c.hp, 0);
+      let avgHp = Math.floor(totalHp / allCards.length);
+      allCards.forEach(c => c.hp = avgHp);
+      addLogMessage(`💴 [${pName}] ${attacker.name} の「学問のすゝめ」！ 万民平等の理により、敵味方全員のHPが【${avgHp}】に平均化された！`);
+    }
+  },
+
+  "maruyama_masao": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 無責任の体系: 超国家主義・天皇制支持キャラを消去
+    const imperialIds = ["motoori_norinaga", "yamaga_soko", "yokoi_shonan", "shotoku_taishi"];
+    let imperialEnemies = targetObj.cards.filter(c => c.hp > 0 && imperialIds.includes(c.id));
+    
+    if (imperialEnemies.length > 0) {
+      imperialEnemies.forEach(e => e.hp = 0);
+      addLogMessage(`🏛️ [${pName}] ${attacker.name} の「無知・無責任の体系批判」！ 支配構造に縛られた思想家を解体し即死（HP0）させた！`);
+    } else {
+      const dmg = 25;
+      target.hp -= dmg;
+      if (target.hp < 0) target.hp = 0;
+      addLogMessage(`🏛️ [${pName}] ${attacker.name} の「日本の思想」！ ${target.name} に ${dmg} ダメージ！`);
+    }
+  },
+
+  "miyazawa_kenji": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 雨ニモマケズ: 味方の受けるダメージを無効化バリア化（肩代わり）
+    actorObj.cards.forEach(c => {
+      if (c.hp > 0) c.nullifyCount = (c.nullifyCount || 0) + 1;
+    });
+    addLogMessage(`🌧️ [${pName}] ${attacker.name} の「雨ニモマケズ」！ 苦難を引き受け、味方全員に攻撃を1回防ぐバリア（肩代わり）を張った！`);
+  },
+
+  "motoori_norinaga": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 国学: 日本人キャラ数×5ATKアップ ＋ 賀茂真淵と同席でさらに+5
+    const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga", "natsume_soseki", "nishida_kitaro", "ninomiya_sontoku", "fukuzawa_yukichi", "maruyama_masao", "miyazawa_kenji", "yamaga_soko", "yokoi_shonan", "yoshino_sakuzo"];
+    
+    let jpCount = actorObj.cards.filter(c => c.hp > 0 && japaneseIds.includes(c.id)).length;
+    let boost = jpCount * 5;
+    
+    let hasMabuchi = actorObj.cards.some(c => c.hp > 0 && c.id === "kamo_no_mabuchi");
+    if (hasMabuchi) boost += 5;
+
+    attacker.atk += boost;
+    addLogMessage(`🌸 [${pName}] ${attacker.name} の「もののあはれ（国学）」！ 大和心の結集により攻撃力が【+${boost}】上昇した！`);
+  },
+
+  "yamaga_soko": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 古学派: 古学派の絆でHPが1.2倍(増幅)
+    let extraHp = Math.floor(attacker.hp * 0.2);
+    attacker.hp += extraHp;
+    addLogMessage(`⚔️ [${pName}] ${attacker.name} の「聖教要録（古学派）」！ 武士道の原点を見直し、自身のHPが1.2倍（+${extraHp}）に増加した！`);
+  },
+
+  "yokoi_shonan": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 公武合体: 相手全体のバフ解除＆攻撃力を削る
+    targetObj.cards.forEach(c => {
+      if (c.hp > 0) {
+        c.atkBuff = false;
+        c.defenseBuff = false;
+        c.atk = Math.max(0, c.atk - 10);
+      }
+    });
+    addLogMessage(`🤝 [${pName}] ${attacker.name} の「公武合体・富国強兵」！ 敵陣の体制を崩して強化を解除し、攻撃力を10低下させた！`);
+  },
+
+  "yoshino_sakuzo": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 民本主義の運: ダイス成功で日本思想家を無力化、失敗で自身即死
+    const isSuccess = Math.random() < 0.5;
+    if (isSuccess) {
+      const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga", "natsume_soseki", "nishida_kitaro", "ninomiya_sontoku", "fukuzawa_yukichi", "maruyama_masao", "miyazawa_kenji", "yamaga_soko", "yokoi_shonan", "yoshino_sakuzo"];
+      targetObj.cards.forEach(c => {
+        if (c.hp > 0 && japaneseIds.includes(c.id)) {
+          c.atk = 0;
+          c.isStunned = true;
+        }
+      });
+      addLogMessage(`🗳️ [${pName}] ${attacker.name} の「民本主義」！ 運命の憲政が結実！ 敵陣の日本思想家を行動不能＆攻撃力0にした！`);
+    } else {
+      attacker.hp = 0;
+      addLogMessage(`🗳️ [${pName}] ${attacker.name} の「民本主義」！ 倒幕・大正デモクラシーの挫折により、吉野自身が倒れた（HP0）...`);
+    }
+  },
+
+  "watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 風土改変: 全バフ・デバフ解除＋敵全体のHP/ATKを半減し、削った分を和辻自身に加算
+    [actorObj, targetObj].forEach(side => {
+      side.cards.forEach(c => {
+        c.atkBuff = false;
+        c.defenseBuff = false;
+        c.nullifyCount = 0;
+        c.isStunned = false;
+      });
+    });
+
+    let totalStolenHp = 0;
+    let totalStolenAtk = 0;
+
+    targetObj.cards.forEach(enemy => {
+      if (enemy.hp > 0) {
+        let hpCut = Math.floor(enemy.hp / 2);
+        let atkCut = Math.floor(enemy.atk / 2);
+        enemy.hp -= hpCut;
+        enemy.atk -= atkCut;
+        totalStolenHp += hpCut;
+        totalStolenAtk += atkCut;
+      }
+    });
+
+    attacker.hp += totalStolenHp;
+    attacker.atk += totalStolenAtk;
+
+    addLogMessage(`☯️ [${pName}] ${attacker.name} の「風土改変」！ 敵全体のHPとATKを半減させ、和辻自身が（HP+${totalStolenHp} / ATK+${totalStolenAtk}）奪い取った！`);
+  },
+
+  "miyoshi_keiko": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // トランプ氏召喚: 与えたダメージ分HPがUPする
+    const dmg = attacker.atk;
+    target.hp -= dmg;
+    if (target.hp < 0) target.hp = 0;
+    attacker.hp += dmg;
+    addLogMessage(`🇺🇸 [${pName}] ${attacker.name} の「トランプ氏召喚」！ ${target.name} に ${dmg} ダメージを与え、同等のHP（+${dmg}）を獲得した！`);
+  },
+
+  "epicurus": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 隠れて生きよ: 50%の確率でダメージ回避(バリア獲得)
+    if (Math.random() < 0.5) {
+      attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
+      addLogMessage(`🌿 [${pName}] ${attacker.name} の「隠れて生きよ」！ 庭園の隠遁により敵の攻撃回避バリア（1回）を獲得！`);
+    } else {
+      addLogMessage(`🌿 [${pName}] ${attacker.name} は隠れようとしたが、見つかってしまった！`);
+    }
+  },
+
+  "ganjin": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 日本への渡航失敗を糧に！: 5回の渡航失敗＝5回分の絶対攻撃無効バリア
+    attacker.nullifyCount = (attacker.nullifyCount || 0) + 5;
+    addLogMessage(`🌊 [${pName}] ${attacker.name} の「渡航失敗を糧に！」！ 5度の失明と荒波を乗り越えた不屈の精神により、攻撃を5回無効化する絶対鉄壁を展開！`);
+  },
