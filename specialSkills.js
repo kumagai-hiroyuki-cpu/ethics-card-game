@@ -11,23 +11,29 @@ const specialSkillLogic = {
     }
   },
 
-  "watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    // 1. 両チームの状態異常を解除 (※もし毒などの状態異常フラグを追加している場合はここでリセットします)
+"watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 1. 両チームの状態異常を解除 (※もし毒などの状態異常フラグを使用している場合はここでリセット)
     // actorObj.cards.forEach(c => c.statusAilment = null); 
     // targetObj.cards.forEach(c => c.statusAilment = null);
 
-    let stolenAtk = 0;
+    let stolenHp = 0;
 
-    // 2. 敵全体のステータス(攻撃力)を半減して奪う
+    // 2. 敵全体のHPを半減して奪う
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
         if (enemy.hp > 0) {
-          let decrease = Math.floor(enemy.atk / 2); // 現在の攻撃力を半分にする
-          enemy.atk -= decrease;
-          stolenAtk += decrease; // 減らした分を吸収用変数に貯める
+          let decrease = Math.floor(enemy.hp / 2); // 現在のHPを半分にする
+          enemy.hp -= decrease;
+          stolenHp += decrease; // 減らした分を吸収用変数に貯める
         }
       });
     }
+
+    // 3. 奪ったHPを自身のHPに加算
+    attacker.hp += stolenHp;
+
+    addLogMessage(`☯️ [${pName}] ${attacker.name} のスキル発動！敵全体のHPを半減させ、合計 ${stolenHp} のHPを吸収した！`);
+  },
 
     // 3. 奪ったステータスを和辻の攻撃力に加算
     attacker.atk += stolenAtk;
