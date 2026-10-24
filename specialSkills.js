@@ -29,20 +29,20 @@ const specialSkillLogic = {
       });
     }
 
-    // 3. 奪ったHPを自身のHPに加算
-    attacker.hp += stolenHp;
+   // 3. 奪ったHPを自身のHPに加算
+  attacker.hp += stolenHp;
 
-    addLogMessage(`☯️ [${pName}] ${attacker.name} のスキル発動！敵全体のHPを半減させ、合計 ${stolenHp} のHPを吸収した！`);
-  
+  addLogMessage(`🔯 [${pName}] ${attacker.name} のスキル発動！敵全体のHPを半減させ、合計 ${stolenHp} のHPを吸収した！`);
 
-    // 3. 奪ったステータスを和辻の攻撃力に加算
+  // 3. 奪ったステータスを和辻の攻撃力に加算
+  if (typeof stolenAtk !== 'undefined') {
     attacker.atk += stolenAtk;
+  }
 
-    // 4. ログの出力
-    addLogMessage(`🌪️ [${pName}] ${attacker.name} の「風土改変」！`);
-    addLogMessage(`敵全体のステータスを半減させ、合計 ${stolenAtk} の攻撃力を奪い取った！`);
-  },
-
+  // 4. ログの出力
+  addLogMessage(`🌪️ [${pName}] ${attacker.name} の「風土改変」！`);
+  addLogMessage(`敵全体のステータスを半減させ、合計 ${stolenAtk || 0} の攻撃力を奪い取った！`);
+},
 "aristotle": function(pName, attacker, target, actorObj, targetObj, activePt) {
     // 三段論法: ターゲットに「前提条件」を付与。3回目でHPを0にする
     if (!target.syllogism) target.syllogism = 0;
