@@ -1,6 +1,5 @@
 // パッシブスキルの定義辞書
 const passiveSkillLogic = {
-  // ① 戦闘開始時に発動するスキル
   onBattleStart: {
     "産婆術": function(pName, card, myTeam, enemyTeam) {
       card.atk += 5;
@@ -16,26 +15,10 @@ const passiveSkillLogic = {
       addLogMessage(`🏰 [受動] ${card.name} の「神の国」！ 味方全員の最大HPが10増加！`);
     }
   },
-
-  // ② ターン開始時に発動するスキル
-  onTurnStart: {
-    // ターン開始時スキルが必要な場合はここに記述
-  },
-
-  // ③ ターン終了時に発動するスキル
-  onTurnEnd: {
-    // ターン終了時スキルが必要な場合はここに記述
-  },
-
-  // ④ 被ダメージ時に発動するスキル
-  onTakeDamage: {
-    // 被弾時スキルが必要な場合はここに記述
-  },
-
-  // ⑤ 死亡時に発動するスキル
-  onDeath: {
-    // 死亡時スキルが必要な場合はここに記述
-  }
+  onTurnStart: {},
+  onTurnEnd: {},
+  onTakeDamage: {},
+  onDeath: {}
 };
 
 // パッシブスキル実行用共通関数
