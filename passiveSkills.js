@@ -1,77 +1,50 @@
-// パッシブスキルの定義
+// パッシブスキルの定義辞書
 const passiveSkillLogic = {
-
-  // ==========================================
-  // ① バトル開始時（開戦時）に発動するスキル
-  // ==========================================
-  "onBattleStart": {
+  // ① 戦闘開始時に発動するスキル
+  onBattleStart: {
     "産婆術": function(pName, card, myTeam, enemyTeam) {
-      // 例: 戦闘開始時に自身の攻撃力を+5
       card.atk += 5;
-      addLogMessage(`🌱 [パッシブ] ${card.name} の「産婆術」！ 相手の対話を促し攻撃力が 5 上昇！`);
+      addLogMessage(`🍼 [受動] ${card.name} の「産婆術」！ 対話により攻撃力が5上昇！`);
     },
     "神の国": function(pName, card, myTeam, enemyTeam) {
-      // 例: 開戦時にチーム全体のHPを+10
-      myTeam.cards.forEach(c => c.hp += 10);
-      addLogMessage(`🏰 [パッシブ] ${card.name} の「神の国」！ 味方全員の最大生命力が 10 増加した！`);
-    }
-  },
-
-  // ==========================================
-  // ② 毎ターン開始時（または行動前）に発動するスキル
-  // ==========================================
-  "onTurnStart": {
-    "万物は流転する": function(pName, card, myTeam, enemyTeam) {
-      // 例: 毎ターンHPが5回復
-      if (card.hp > 0) {
-        card.hp += 5;
-        addLogMessage(`🌊 [パッシブ] ${card.name} の「万物流転」！ HPが 5 回復した！`);
+      if (myTeam && myTeam.cards) {
+        myTeam.cards.forEach(c => {
+          c.maxHp = (c.maxHp || c.hp) + 10;
+          c.hp += 10;
+        });
       }
+      addLogMessage(`🏰 [受動] ${card.name} の「神の国」！ 味方全員の最大HPが10増加！`);
     }
   },
 
-  // ==========================================
-  // ③ ダメージを受けた時（被弾時）に発動するスキル
-  // ==========================================
-  "onTakeDamage": {
-    "不動心": function(pName, card, attacker, damage) {
-      // 例: 受けるダメージを常時 -5 軽減する
-      const reducedDmg = Math.max(1, damage - 5);
-      addLogMessage(`🛡️ [パッシブ] ${card.name} の「不動心」！ ダメージを 5 軽減した！`);
-      return reducedDmg; // 軽減後のダメージを返す
-    }
+  // ② ターン開始時に発動するスキル
+  onTurnStart: {
+    // ターン開始時スキルが必要な場合はここに記述
   },
 
-  // ==========================================
-  // ④ 倒れた時（HPが0になった時）に発動するスキル
-  // ==========================================
-  "onDeath": {
-    "遺志継承": function(pName, card, myTeam, enemyTeam) {
-      // 例: 自分が倒れた時、味方最弱キャラのATKを+10
-      let aliveAllies = myTeam.cards.filter(c => c.hp > 0);
-      if (aliveAllies.length > 0) {
-        let weakest = aliveAllies.reduce((a, b) => a.atk < b.atk ? a : b);
-        weakest.atk += 10;
-        addLogMessage(`🕯️ [パッシブ] ${card.name} は倒れ際に「遺志」を ${weakest.name} に託した！（ATK+10）`);
-      }
-    }
+  // ③ ターン終了時に発動するスキル
+  onTurnEnd: {
+    // ターン終了時スキルが必要な場合はここに記述
+  },
+
+  // ④ 被ダメージ時に発動するスキル
+  onTakeDamage: {
+    // 被弾時スキルが必要な場合はここに記述
+  },
+
+  // ⑤ 死亡時に発動するスキル
+  onDeath: {
+    // 死亡時スキルが必要な場合はここに記述
   }
 };
 
-/**
- * パッシブスキル呼び出し用共通関数
- * @param {string} trigger - 発動タイミング ("onBattleStart", "onTurnStart", "onTakeDamage", "onDeath")
- * @param {object} card - 発動者カード
- * @param {any} arg1 - 味方チーム or 攻撃者など
- * @param {any} arg2 - 敵チーム or ダメージ量など
- */
-function triggerPassive(trigger, card, arg1, arg2) {
-  if (!card || !card.passive) return;
+// パッシブスキル実行用共通関数
+function triggerPassive(timing, card, myTeam, enemyTeam, extraVal) {
+  if (!card || !card.passiveName) return extraVal;
   
-  const skillName = card.passive;
-  const triggerGroup = passiveSkillLogic[trigger];
-
-  if (triggerGroup && typeof triggerGroup[skillName] === "function") {
-    return triggerGroup[skillName](card.name, card, arg1, arg2);
+  const timingGroup = passiveSkillLogic[timing];
+  if (timingGroup && typeof timingGroup[card.passiveName] === "function") {
+    return timingGroup[card.passiveName](myTeam ? myTeam.name : "", card, myTeam, enemyTeam, extraVal);
   }
+  return extraVal;
 }
