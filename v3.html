@@ -692,33 +692,51 @@ function processBattlePhase() {
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
+  // 1. まず属性倍率 mult を計算する
   const mult = getAttributeMultiplier(attacker.type, target.type);
   let finalDamage = Math.floor(baseDmg * mult);
 
   if (attacker.atkBuff) {
     finalDamage *= 2;
-    attacker.atkBuff = false; // 攻撃したら解除
+    attacker.atkBuff = false;
     addLogMessage(`💨 ${attacker.name} の攻撃力が2倍にアップしている！`);
   }
 
   if (target.defenseBuff) {
     finalDamage = Math.floor(finalDamage / 2);
-    target.defenseBuff = false; // 防いだら解除
+    target.defenseBuff = false;
     addLogMessage(`🌍 ${target.name} は土の盾でダメージを半減した！`);
   }
 
-  // ▼▼ スピノザの「決定論」ダメージ固定処理（関数の内部に配置） ▼▼
   if (target.fixedDamageVal !== undefined && target.fixedDamageVal !== null) {
     finalDamage = target.fixedDamageVal;
-    target.fixedDamageVal = null; // 1回発動したら解除
+    target.fixedDamageVal = null;
     addLogMessage(`📐 ${target.name} は「決定論」により、被ダメージが ${finalDamage} に固定された！`);
   }
-// ▼▼ 【被弾時パッシブ】ダメージ軽減などの計算 ▼▼
-  const reducedDmg = triggerPassive("onTakeDamage", target, attacker, finalDamage);
-  if (typeof reducedDmg === "number") {
-    finalDamage = reducedDmg;
+
+  // 2. 被弾時パッシブの呼び出し
+  if (typeof triggerPassive === "function") {
+    const reducedDmg = triggerPassive("onTakeDamage", target, attacker, finalDamage);
+    if (typeof reducedDmg === "number") {
+      finalDamage = reducedDmg;
+    }
   }
 
+  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
+  
+  target.hp -= finalDamage;
+  if (target.hp < 0) target.hp = 0; 
+
+  addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
+
+  // 3. 死亡時パッシブの呼び出し
+  if (target.hp === 0) {
+    addLogMessage(`💀 ${target.name} は倒れた！`);
+    if (typeof triggerPassive === "function") {
+      triggerPassive("onDeath", target, targetObj, actorObj);
+    }
+  }
+}
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
   
   target.hp -= finalDamage;
