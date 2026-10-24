@@ -729,9 +729,16 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     addLogMessage(`🌍 ${target.name} は土の盾でダメージを半減した！`);
   }
 
+  // ▼▼ スピノザの「決定論」ダメージ固定処理（関数の内部に配置） ▼▼
+  if (target.fixedDamageVal !== undefined && target.fixedDamageVal !== null) {
+    finalDamage = target.fixedDamageVal;
+    target.fixedDamageVal = null; // 1回発動したら解除
+    addLogMessage(`📐 ${target.name} は「決定論」により、被ダメージが ${finalDamage} に固定された！`);
+  }
+
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
   
- target.hp -= finalDamage;
+  target.hp -= finalDamage;
   if (target.hp < 0) target.hp = 0; 
 
   addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
@@ -740,12 +747,6 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     addLogMessage(`💀 ${target.name} は倒れた！`);
   }
 }
-// ▼▼ スピノザの「決定論」ダメージ固定処理 ▼▼
-  if (target.fixedDamageVal !== undefined && target.fixedDamageVal !== null) {
-    finalDamage = target.fixedDamageVal;
-    target.fixedDamageVal = null; // 1回発動したら解除
-    addLogMessage(`📐 ${target.name} は「決定论」により、被ダメージが 5 に固定された！`);
-  }  
 function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
 
