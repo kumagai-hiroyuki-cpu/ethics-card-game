@@ -665,46 +665,29 @@ function processBattlePhase() {
 
   addLogMessage("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
   
-  applyTurnStartPassives(gameState.p1, gameState.turnCount);
-  applyTurnStartPassives(gameState.p2, gameState.turnCount);
+  // ▼▼ 【ターン開始時パッシブ】ここで呼び出し ▼▼
+  [gameState.p1, gameState.p2].forEach(pObj => {
+    pObj.cards.forEach(card => {
+      if (card.hp > 0) {
+        triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
+      }
+    });
+  });
 
   applyAction(p1Name, gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
   applyAction(p2Name, gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
 
-  applyTurnEndPassives(p1Name, gameState.p1);
-  applyTurnEndPassives(p2Name, gameState.p2);
+  // ▼▼ 【ターン終了時パッシブ】ここで呼び出し ▼▼
+  [gameState.p1, gameState.p2].forEach(pObj => {
+    pObj.cards.forEach(card => {
+      if (card.hp > 0) {
+        triggerPassive("onTurnEnd", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
+      }
+    });
+  });
 
   gameState.turnCount++;
-  gameState.p1.cmd = null;
-  gameState.p2.cmd = null;
-  gameState.phase = "command_select";
-  gameState.logs = currentLogs;
-
-  if (isCpuMode) {
-    updateGameUI();
-  } else {
-    roomRef.set(gameState);
-  }
-}
-
-// ターン開始時パッシブの共通実行
-function applyTurnStartPassives(pName, playerObj, enemyObj) {
-  if (!playerObj || !playerObj.cards) return;
-  playerObj.cards.forEach(card => {
-    if (card.hp > 0) {
-      triggerPassive("onTurnStart", card, playerObj, enemyObj);
-    }
-  });
-}
-
-// ターン終了時パッシブの共通実行
-function applyTurnEndPassives(pName, playerObj, enemyObj) {
-  if (!playerObj || !playerObj.cards) return;
-  playerObj.cards.forEach(card => {
-    if (card.hp > 0) {
-      triggerPassive("onTurnEnd", card, playerObj, enemyObj);
-    }
-  });
+  // （以下略）
 }
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
