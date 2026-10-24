@@ -516,7 +516,23 @@ function updateGameUI() {
       document.getElementById("command-inputs").style.display = "block";
       document.getElementById("wait-msg").innerText = "⚔️ コマンドを選択してください";
     }
-
+// 戦闘開始時に1度だけ実行する関数の例
+function triggerBattleStartPassives() {
+  if (!gameState) return;
+  
+  ["p1", "p2"].forEach(role => {
+    const playerObj = gameState[role];
+    const enemyObj = gameState[role === "p1" ? "p2" : "p1"];
+    
+    if (playerObj && playerObj.cards) {
+      playerObj.cards.forEach(card => {
+        if (card.hp > 0) {
+          triggerPassive("onBattleStart", card, playerObj, enemyObj);
+        }
+      });
+    }
+  });
+}
     if (!isCpuMode && gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
       processBattlePhase();
     }
@@ -671,43 +687,22 @@ function processBattlePhase() {
   }
 }
 
-function applyTurnStartPassives(playerObj, turn) {
+// ターン開始時パッシブの共通実行
+function applyTurnStartPassives(pName, playerObj, enemyObj) {
   if (!playerObj || !playerObj.cards) return;
-  playerObj.cards.forEach(c => {
-    if (c.id === "erikson" && c.hp > 0 && c.passiveVal > 0) {
-      const bonusAtk = (turn * (turn + 1)) / 2;
-      c.atk = Math.min(21, c.baseAtk + bonusAtk);
+  playerObj.cards.forEach(card => {
+    if (card.hp > 0) {
+      triggerPassive("onTurnStart", card, playerObj, enemyObj);
     }
   });
 }
 
-function applyTurnEndPassives(pName, playerObj) {
+// ターン終了時パッシブの共通実行
+function applyTurnEndPassives(pName, playerObj, enemyObj) {
   if (!playerObj || !playerObj.cards) return;
-  playerObj.cards.forEach(c => {
-    const pasPt = c.passiveVal || 0;
-    if (c.hp > 0 && pasPt > 0) {
-      const pasRate = Math.min(100, Math.floor((pasPt / 50) * 100));
-      const pType = c.passiveType || (c.id === "heraclitus" ? "self_heal" : "heal");
-
-      if (Math.floor(Math.random() * 100) < pasRate) {
-        switch (pType) {
-          case "heal":
-            playerObj.cards.forEach(ally => { if(ally.hp > 0) ally.hp = Math.min(ally.maxHp, ally.hp + pasPt); });
-            addLogMessage("🌀 [" + pName + "] " + c.name + " の「" + c.passiveName + "」成功！ 味方全員のHPが " + pasPt + " 回復！ (確率:" + pasRate + "%)");
-            break;
-
-          case "self_heal":
-            c.hp = Math.min(c.maxHp, c.hp + pasPt);
-            addLogMessage("🌀 [" + pName + "] " + c.name + " の「" + c.passiveName + "」成功！ 自身のHPが " + pasPt + " 回復！ (確率:" + pasRate + "%)");
-            break;
-
-          case "atk_up":
-            const buffAmt = Math.max(1, Math.floor(pasPt / 5));
-            c.atk += buffAmt;
-            addLogMessage("🔥 [" + pName + "] " + c.name + " の「" + c.passiveName + "」成功！ 自身のATKが +" + buffAmt + " 上昇！ (残ATK:" + c.atk + ")");
-            break;
-        }
-      }
+  playerObj.cards.forEach(card => {
+    if (card.hp > 0) {
+      triggerPassive("onTurnEnd", card, playerObj, enemyObj);
     }
   });
 }
