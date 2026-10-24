@@ -692,7 +692,7 @@ function processBattlePhase() {
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
-  // 1. まず属性倍率 mult を計算する
+  // ① 最初に mult を定義・計算する
   const mult = getAttributeMultiplier(attacker.type, target.type);
   let finalDamage = Math.floor(baseDmg * mult);
 
@@ -714,7 +714,7 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     addLogMessage(`📐 ${target.name} は「決定論」により、被ダメージが ${finalDamage} に固定された！`);
   }
 
-  // 2. 被弾時パッシブの呼び出し
+  // ② 被弾時パッシブの処理
   if (typeof triggerPassive === "function") {
     const reducedDmg = triggerPassive("onTakeDamage", target, attacker, finalDamage);
     if (typeof reducedDmg === "number") {
@@ -722,6 +722,7 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     }
   }
 
+  // ③ mult を使ったログ用テキスト生成
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
   
   target.hp -= finalDamage;
@@ -729,36 +730,13 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
 
   addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
 
-  // 3. 死亡時パッシブの呼び出し
+  // ④ 死亡時パッシブの処理
   if (target.hp === 0) {
     addLogMessage(`💀 ${target.name} は倒れた！`);
     if (typeof triggerPassive === "function") {
       triggerPassive("onDeath", target, targetObj, actorObj);
     }
   }
-}
-  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
-  
-  target.hp -= finalDamage;
-  if (target.hp < 0) target.hp = 0; 
-
-  addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
-
-  // ▼▼ 【死亡時パッシブ】HPが0になった場合の判定 ▼▼
-  if (target.hp === 0) {
-    addLogMessage(`💀 ${target.name} は倒れた！`);
-    triggerPassive("onDeath", target, targetObj, actorObj);
-  }
-}
-  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
-  
-  target.hp -= finalDamage;
-  if (target.hp < 0) target.hp = 0; 
-
-  addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
-
-  if (target.hp === 0) {
-    addLogMessage(`💀 ${target.name} は倒れた！`);
 }
 function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
