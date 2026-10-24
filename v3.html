@@ -796,7 +796,8 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
 
     addLogMessage("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」発動！ (発動率:" + activeRate + "%)");
 
-    const sType = attacker.skillType || (attacker.id === "socrates" || attacker.id === "kant" || attacker.id === "watsuji" || attacker.id === "festinger" ? "special" : "debuff");
+    // attacker.skillType ("special", "damage", "heal" 等) を優先して取得する
+　　const sType = attacker.skillType || attacker.type || "special";
 
     switch (sType) {
       case "damage":
