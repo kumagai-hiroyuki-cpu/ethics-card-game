@@ -33,7 +33,7 @@ const specialSkillLogic = {
     attacker.hp += stolenHp;
 
     addLogMessage(`☯️ [${pName}] ${attacker.name} のスキル発動！敵全体のHPを半減させ、合計 ${stolenHp} のHPを吸収した！`);
-  },
+  
 
     // 3. 奪ったステータスを和辻の攻撃力に加算
     attacker.atk += stolenAtk;
