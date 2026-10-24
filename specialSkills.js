@@ -1175,4 +1175,5 @@ const specialSkillLogic = {
     // 日本への渡航失敗を糧に！: 5回の渡航失敗＝5回分の絶対攻撃無効バリア
     attacker.nullifyCount = (attacker.nullifyCount || 0) + 5;
     addLogMessage(`🌊 [${pName}] ${attacker.name} の「渡航失敗を糧に！」！ 5度の失明と荒波を乗り越えた不屈の精神により、攻撃を5回無効化する絶対鉄壁を展開！`);
-  },
+  }
+};
