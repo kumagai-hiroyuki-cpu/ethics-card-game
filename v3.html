@@ -349,12 +349,18 @@ let testAttacker, testDefender;
 // 画面のHP表示を更新する関数
 function updateBattleUI() {
   if (!testAttacker || !testDefender) return;
-  document.getElementById('attacker-name').innerText = testAttacker.name;
-  document.getElementById('attacker-hp').innerText = testAttacker.currentHP;
-  document.getElementById('defender-name').innerText = testDefender.name;
-  document.getElementById('defender-hp').innerText = Math.max(0, testDefender.currentHP);
-}
- 
+  const atkNameEl = document.getElementById('attacker-name');
+  if (atkNameEl) atkNameEl.innerText = testAttacker.name;
+
+  const atkHpEl = document.getElementById('attacker-hp');
+  if (atkHpEl) atkHpEl.innerText = testAttacker.currentHP;
+
+  const defNameEl = document.getElementById('defender-name');
+  if (defNameEl) defNameEl.innerText = testDefender.name;
+
+  const defHpEl = document.getElementById('defender-hp');
+  if (defHpEl) defHpEl.innerText = Math.max(0, testDefender.currentHP);
+} 
 fetch('cards.json')
   .then(response => response.json())
   .then(data => {
