@@ -1158,16 +1158,16 @@ const specialSkillLogic = {
     target.hp -= dmg;
     if (target.hp < 0) target.hp = 0;
     attacker.hp += dmg;
-    addLogMessage(`🇺🇸 [${pName}] ${attacker.name} の「トランプ氏召喚」！ ${target.name} に ${dmg} ダメージを与え、同等のHP（+${dmg}）を獲得した！`);
+    addLogMessage(`🇺🇸 [${pName}] ${attacker.name} の「トランプ氏召喚」！ ${target.name} に ${dmg} ダメージを与え、同等のHP (+${dmg}) を獲得した！`);
   },
 
   "epicurus": function(pName, attacker, target, actorObj, targetObj, activePt) {
     // 隠れて生きよ: 50%の確率でダメージ回避(バリア獲得)
     if (Math.random() < 0.5) {
       attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-      addLogMessage(`🌿 [${pName}] ${attacker.name} の「隠れて生きよ」！ 庭園の隠遁により敵の攻撃回避バリア（1回）を獲得！`);
+      addLogMessage(`🌱 [${pName}] ${attacker.name} の「隠れて生きよ」！ 庭園の隠道により敵の攻撃回避バリア (1回) を獲得！`);
     } else {
-      addLogMessage(`🌿 [${pName}] ${attacker.name} は隠れようとしたが、見つかってしまった！`);
+      addLogMessage(`🌱 [${pName}] ${attacker.name} は隠れようとしたが、見つかってしまった！`);
     }
   },
 
