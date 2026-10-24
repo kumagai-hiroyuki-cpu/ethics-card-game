@@ -741,7 +741,6 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
 
   if (target.hp === 0) {
     addLogMessage(`💀 ${target.name} は倒れた！`);
-  }
 }
 function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
