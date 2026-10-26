@@ -454,10 +454,10 @@ function startCpuBattle() {
   addLogMessage("🎮 CPU対戦が開始されました！「カードをめくる」ボタンを押してください。");
   updateGameUI();
 }
+
 function revealNextCard() {
   if (!gameState || gameState.phase !== "card_reveal") return;
 
-  // P1（あなた）の3枚 ➜ P2（相手）の3枚 の順でめくる
   const allCards = [...gameState.p1.cards, ...gameState.p2.cards];
 
   if (gameState.revealedCount < allCards.length) {
@@ -465,7 +465,6 @@ function revealNextCard() {
     gameState.revealedCount++;
   }
 
-  // 6枚すべてめくり終わったらコマンド選択フェーズへ移行
   if (gameState.revealedCount >= allCards.length) {
     gameState.phase = "command_select";
     addLogMessage("⚔️ すべての思想家が登場しました！コマンドを選択してください。");
