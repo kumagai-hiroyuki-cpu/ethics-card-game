@@ -458,16 +458,19 @@ function startCpuBattle() {
 function revealNextCard() {
   if (!gameState || gameState.phase !== "card_reveal") return;
 
-  const allCards = [...gameState.p1.cards, ...gameState.p2.cards];
+  // 自分のチームのカード3枚を取得
+  const myCards = gameState[myRole].cards;
 
-  if (gameState.revealedCount < allCards.length) {
-    allCards[gameState.revealedCount].isFlipped = true;
+  // 自分のカードを1枚ずつめくる
+  if (gameState.revealedCount < myCards.length) {
+    myCards[gameState.revealedCount].isFlipped = true;
     gameState.revealedCount++;
   }
 
-  if (gameState.revealedCount >= allCards.length) {
+  // 自分のカード（3枚）をめくり終わったら、コマンド選択画面へ移行
+  if (gameState.revealedCount >= myCards.length) {
     gameState.phase = "command_select";
-    addLogMessage("⚔️ すべての思想家が登場しました！コマンドを選択してください。");
+    addLogMessage("⚔️ あなたの思想家が出揃いました！コマンドを選択してください。");
   }
 
   updateGameUI();
