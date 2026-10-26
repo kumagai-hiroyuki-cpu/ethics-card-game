@@ -426,34 +426,52 @@ function applyTeamSynergy(cards, teamName) {
 
 // === CPU対戦開始 ===
 function startCpuBattle() {
-  if (!CARD_DATABASE.length) return alert("カードデータを読み込み中です。少々お待ちください。");
-  
   isCpuMode = true;
   myRole = "p1";
   currentLogs = [];
 
   const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
-  const p1Cards = shuffled.slice(0, 3).map(c => ({ ...c, hp: c.maxHp, baseAtk: c.atk, skillUsed: false, isFlipped: false }));
-  const p2Cards = shuffled.slice(3, 6).map(c => ({ ...c, hp: c.maxHp, baseAtk: c.atk, skillUsed: false, isFlipped: false }));
 
-  applyTeamSynergy(p1Cards, "あなた");
-  applyTeamSynergy(p2Cards, "CPU");
+  const p1Cards = shuffled.slice(0, 3).map(c => ({
+    ...c,
+    hp: c.hp ?? c.maxHp ?? 100,
+    currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+    maxHp: c.maxHp ?? 100,
+    atk: c.atk ?? 20,
+    baseAtk: c.baseAtk ?? c.atk ?? 20,
+    skillUsed: false,
+    isFlipped: false // 初期値はすべて裏面
+  }));
+
+  const p2Cards = shuffled.slice(3, 6).map(c => ({
+    ...c,
+    hp: c.hp ?? c.maxHp ?? 100,
+    currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+    maxHp: c.maxHp ?? 100,
+    atk: c.atk ?? 20,
+    baseAtk: c.baseAtk ?? c.atk ?? 20,
+    skillUsed: false,
+    isFlipped: false // 初期値はすべて裏面
+  }));
+
+  applyTeamSynergy(p1Cards, "P1");
+  applyTeamSynergy(p2Cards, "P2");
 
   gameState = {
     turnCount: 1,
     p1: { cards: p1Cards, cmd: null },
     p2: { cards: p2Cards, cmd: null },
-    phase: "card_reveal", // めくりフェーズから開始
-    revealedCount: 0,     // めくった枚数 (0〜6)
-    logs: currentLogs
+    phase: "card_reveal",
+    revealedCount: 0, // ★ ここを確実に 0 でリセット
+    logs: ["⚔️ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
 
-  const enemyTitleEl = document.getElementById("enemy-title");
-  if (enemyTitleEl) enemyTitleEl.innerText = "CPUチーム";
+  document.getElementById("setup-area").style.display = "none";
+  document.getElementById("game-area").style.display = "block";
 
-  addLogMessage("🎮 CPU対戦が開始されました！「カードをめくる」ボタンを押してください。");
   updateGameUI();
 }
+
 
 function revealNextCard() {
   if (!gameState || gameState.phase !== "card_reveal") return;
