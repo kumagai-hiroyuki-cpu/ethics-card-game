@@ -668,7 +668,6 @@ function renderCard(c, isEnemy) {
 
   // ▼ オープン済み（表面）の場合の表示
   const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
-  const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
   const synergyClass = c.hasSynergy ? 'synergy-active' : '';
 
   return `
