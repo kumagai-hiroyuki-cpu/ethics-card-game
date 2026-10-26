@@ -603,6 +603,22 @@ function renderCards(containerId, cards) {
   if (!el || !cards) return;
 
   el.innerHTML = cards.map((c) => {
+    // ▼ 未オープン（裏面）の場合の表示
+    if (!c.isFlipped) {
+      return `
+        <div class="card-container" style="background: #222; border-color: #555;">
+          <div style="height: 140px; display: flex; align-items: center; justify-content: center; background: #111; color: #f39c12; font-size: 2em; font-weight: bold;">
+            ❓
+          </div>
+          <div class="card-info" style="text-align: center;">
+            <div class="card-name" style="color: #888;">???</div>
+            <div style="font-size: 10px; color: #666; margin-top: 4px;">未開放</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ▼ オープン済み（表面）の場合の表示（既存処理）
     const hpPercent = Math.max(0, (c.hp / c.maxHp) * 100);
     const synergyClass = c.hasSynergy ? 'synergy-active' : '';
     return `
