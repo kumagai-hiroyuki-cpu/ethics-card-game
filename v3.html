@@ -680,11 +680,11 @@ function updateGameUI() {
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
-  
+
   ["p1", "p2"].forEach(role => {
     const playerObj = gameState[role];
     const enemyObj = gameState[role === "p1" ? "p2" : "p1"];
-    
+
     if (playerObj && playerObj.cards) {
       playerObj.cards.forEach(card => {
         if (card.hp > 0) {
@@ -693,10 +693,9 @@ function triggerBattleStartPassives() {
       });
     }
   });
-}
-    if (!isCpuMode && gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
-      processBattlePhase();
-    }
+
+  if (!isCpuMode && gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
+    processBattlePhase();
   }
 }
 
