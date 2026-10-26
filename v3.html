@@ -624,19 +624,60 @@ function updateSkillDisplay() {
 }
 
 function submitCommand(type) {
-  const atkIdx = parseInt(document.getElementById("attacker-select").value);
-  const cmdData = { type: type, attacker: atkIdx };
+  console.log("① submitCommandが呼ばれました。タイプ:", type);
+
+  if (!gameState) {
+    console.log("エラー: gameStateが存在しません");
+    return;
+  }
+
+  const actorSelect = document.getElementById("actor-select");
+  if (!actorSelect) {
+    console.log("エラー: actor-select要素が見つかりません");
+    return;
+  }
+
+  const actorIndex = parseInt(actorSelect.value, 10);
+  console.log("② 選択されたアクターインデックス:", actorIndex);
+
+  const cmd = {
+    type: type,
+    actorIndex: actorIndex
+  };
 
   if (isCpuMode) {
-    gameState.p1.cmd = cmdData;
-    // CPU(P2)の行動を自動生成
-    generateCpuCommand();
-    processBattlePhase();
-  } else {
-    roomRef.child(`${myRole}/cmd`).set(cmdData);
-  }
-}
+    gameState[myRole].cmd = cmd;
 
+    // CPUのランダム選択
+    const enemyRole = myRole === "p1" ? "p2" : "p1";
+    const aliveEnemyIndices = gameState[enemyRole].cards
+      .map((c, i) => c.hp > 0 ? i : null)
+      .filter(i => i !== null);
+    
+    const randomActor = aliveEnemyIndices[Math.floor(Math.random() * aliveEnemyIndices.length)];
+    const randomType = Math.random() < 0.3 ? "skill" : "attack";
+
+    gameState[enemyRole].cmd = {
+      type: randomType,
+      actorIndex: randomActor
+    };
+
+    console.log("③ 両者のコマンドがセットされました。ターン解決に進みます");
+    
+    // ターン解決関数の呼び出し
+    if (typeof resolveCpuTurn === 'function') {
+      resolveCpuTurn();
+    } else if (typeof resolveTurn === 'function') {
+      resolveTurn();
+    } else {
+      console.log("エラー: ターン解決を行う関数（resolveCpuTurn または resolveTurn）が見つかりません！");
+    }
+  } else {
+    roomRef.child(myRole + "/cmd").set(cmd);
+  }
+
+  updateGameUI();
+}
 // === CPUの自動思考ロジック ===
 function generateCpuCommand() {
   const aliveIndices = gameState.p2.cards
