@@ -568,71 +568,25 @@ function sanitizeObject(obj) {
 }
 
 // 2. 部屋の作成・参加を担当する関数
-function joinRoom(role) {
-  const roomId = document.getElementById("room-id-input").value.trim();
-  if (!roomId) return alert("部屋IDを入力してください");
-  if (!CARD_DATABASE.length) return alert("カードデータを読み込み中です。少々お待ちください。");
+function joinRoom(id) {
+  roomId = id;
+  myRole = "p2";
+  const roomRef = db.ref("rooms/" + roomId);
 
-  myRole = role;
-  isCpuMode = false;
-  currentLogs = [];
+  roomRef.set(sanitizeObject(initialGameState));
+  listenToRoom(roomId);
 
-  roomRef = firebase.database().ref("rooms/" + roomId);
-
-  if (role === "p1") {
-    // P1: 部屋を作成
-    const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
-    
-    const p1Cards = shuffled.slice(0, 3).map(c => ({
-      ...c,
-      hp: c.hp ?? c.maxHp ?? 100,
-      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-      maxHp: c.maxHp ?? 100,
-      atk: c.atk ?? 20,
-      baseAtk: c.baseAtk ?? c.atk ?? 20,
-      skillUsed: false,
-      isFlipped: false
-    }));
-
-    const p2Cards = shuffled.slice(3, 6).map(c => ({
-      ...c,
-      hp: c.hp ?? c.maxHp ?? 100,
-      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-      maxHp: c.maxHp ?? 100,
-      atk: c.atk ?? 20,
-      baseAtk: c.baseAtk ?? c.atk ?? 20,
-      skillUsed: false,
-      isFlipped: false
-    }));
-
-    applyTeamSynergy(p1Cards, "P1");
-    applyTeamSynergy(p2Cards, "P2");
-
-    const initialGameState = {
-      turnCount: 1,
-      p1: { cards: p1Cards, cmd: null },
-      p2: { cards: p2Cards, cmd: null },
-      phase: "waiting_p2",
-      revealedCount: 0,
-      logs: ["🏠 部屋作成完了。P2の参加を待っています..."]
-    };
-
-    roomRef.set(sanitizeObject(initialGameState));
-    listenToRoom(roomId);
-  } else {
-    // P2: 部屋に参加
-    listenToRoom(roomId);
-    roomRef.once("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.phase === "waiting_p2") {
-        roomRef.update({
-          phase: "card_reveal",
-          logs: [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"]
-        });
-      }
-    });
-  }
+  roomRef.once("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.phase === "waiting_p2") {
+      roomRef.update({
+        phase: "card_reveal",
+        logs: [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"]
+      });
+    }
+  });
 }
+
 function updateGameUI() {
   if (!gameState) return;
 
@@ -680,7 +634,7 @@ function updateGameUI() {
   }
 }
 
-// 戦闘開始時に1度だけ実行する関数
+// 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
 
@@ -702,7 +656,6 @@ function triggerBattleStartPassives() {
   }
 }
 
-// カード1枚の描画関数
 function renderCard(c, isEnemy) {
   // まだめくられていない（裏面）場合
   if (!c.isFlipped) {
@@ -712,6 +665,22 @@ function renderCard(c, isEnemy) {
       </div>
     `;
   }
+
+  // ▼ オープン済み（表面）の場合の表示
+  const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
+  const synergyClass = c.hasSynergy ? 'synergy-active' : '';
+
+  return `
+    <div class="card-container ${c.currentHP === 0 ? 'defeated' : ''} ${synergyClass}" onclick="openModal('${c.id}')">
+      <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image'">
+      <div class="card-name">${c.name}</div>
+      <div class="hp-bar-container">
+        <div class="hp-bar" style="width: ${hpPercent}%;"></div>
+        <span class="hp-text">${c.currentHP ?? c.hp} / ${c.maxHp}</span>
+      </div>
+    </div>
+  `;
+}
 
   // ▼ オープン済み（表面）の場合の表示（元のデザインを維持）
   const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
@@ -1080,7 +1049,6 @@ function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activ
     // まだ specialSkills.js に書いていないキャラの場合
     addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。");
   }
-}
 }
 </script>
 </body>
