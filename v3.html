@@ -475,6 +475,11 @@ function revealNextCard() {
 
   updateGameUI();
 }
+// undefinedなプロパティを完全に除去する安全化関数
+function sanitizeObject(obj) {
+  return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
+}
+
 function joinRoom(role) {
   const roomId = document.getElementById("room-id-input").value.trim();
   if (!roomId) return alert("部屋IDを入力してください");
@@ -490,8 +495,7 @@ function joinRoom(role) {
     // P1: 部屋を作成
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     
-    // undefined が入らないよう全プロパティの初期値を確実に設定
-    const createCardObject = (c) => ({
+    const p1Cards = shuffled.slice(0, 3).map(c => ({
       ...c,
       hp: c.hp ?? c.maxHp ?? 100,
       currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
@@ -500,28 +504,46 @@ function joinRoom(role) {
       baseAtk: c.baseAtk ?? c.atk ?? 20,
       skillUsed: false,
       isFlipped: false
-    });
+    }));
 
-    const p1Cards = shuffled.slice(0, 3).map(createCardObject);
-    const p2Cards = shuffled.slice(3, 6).map(createCardObject);
+    const p2Cards = shuffled.slice(3, 6).map(c => ({
+      ...c,
+      hp: c.hp ?? c.maxHp ?? 100,
+      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+      maxHp: c.maxHp ?? 100,
+      atk: c.atk ?? 20,
+      baseAtk: c.baseAtk ?? c.atk ?? 20,
+      skillUsed: false,
+      isFlipped: false
+    }));
 
     applyTeamSynergy(p1Cards, "P1");
     applyTeamSynergy(p2Cards, "P2");
 
-    gameState = {
+    const initialGameState = {
       turnCount: 1,
       p1: { cards: p1Cards, cmd: null },
       p2: { cards: p2Cards, cmd: null },
-      phase: "waiting_p2",
+      phase: "waiting_p2", // 最初はP2の参加待ち
       revealedCount: 0,
       logs: ["🏠 部屋作成完了。P2の参加を待っています..."]
     };
 
-    roomRef.set(gameState);
+    // undefined を排除してFirebaseへ保存
+    roomRef.set(sanitizeObject(initialGameState));
     listenToRoom(roomId);
   } else {
-    // P2: 部屋に参加
+    // P2: 部屋に入り、ゲームを card_reveal に進める
     listenToRoom(roomId);
+    roomRef.once("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.phase === "waiting_p2") {
+        roomRef.update({
+          phase: "card_reveal",
+          logs: [...(data.logs || []), "⚔️ P2が参加しました！カードをめくってください。"]
+        });
+      }
+    });
   }
 }
 function updateGameUI() {
