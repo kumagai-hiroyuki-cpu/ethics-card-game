@@ -426,15 +426,15 @@ function applyTeamSynergy(cards, teamName) {
 
 // === CPU対戦開始 ===
 function startCpuBattle() {
-  if (!cardDatabase.length) return alert("カードデータを読み込み中です。少々お待ちください。");
+  if (!CARD_DATABASE.length) return alert("カードデータを読み込み中です。少々お待ちください。");
   
   isCpuMode = true;
   myRole = "p1";
   currentLogs = [];
 
-  const shuffled = [...cardDatabase].sort(() => 0.5 - Math.random());
-  const p1Cards = shuffled.slice(0, 3).map(c => ({ ...c, hp: c.maxHp, atk: c.atk, usedSkill: false, isFlipped: false }));
-  const p2Cards = shuffled.slice(3, 6).map(c => ({ ...c, hp: c.maxHp, atk: c.atk, usedSkill: false, isFlipped: false }));
+  const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
+  const p1Cards = shuffled.slice(0, 3).map(c => ({ ...c, hp: c.maxHp, baseAtk: c.atk, skillUsed: false, isFlipped: false }));
+  const p2Cards = shuffled.slice(3, 6).map(c => ({ ...c, hp: c.maxHp, baseAtk: c.atk, skillUsed: false, isFlipped: false }));
 
   applyTeamSynergy(p1Cards, "あなた");
   applyTeamSynergy(p2Cards, "CPU");
