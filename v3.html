@@ -458,18 +458,21 @@ function startCpuBattle() {
 function revealNextCard() {
   if (!gameState || gameState.phase !== "card_reveal") return;
 
+  // カウンターの安全化
+  if (typeof gameState.revealedCount !== "number") {
+    gameState.revealedCount = 0;
+  }
+
   if (isCpuMode) {
     // --- CPUモードの処理 ---
     const p1Cards = gameState.p1.cards;
-    const p2Cards = gameState.p2.cards; // CPUの手札
+    const p2Cards = gameState.p2.cards;
 
-    // まずプレイヤー(P1)のカードを3枚順番にめくる
     if (gameState.revealedCount < 3) {
       p1Cards[gameState.revealedCount].isFlipped = true;
       gameState.revealedCount++;
     }
 
-    // 自分の3枚がめくり終わったら、CPUの3枚もすべてオープンしてコマンド選択へ
     if (gameState.revealedCount >= 3) {
       p2Cards.forEach(c => c.isFlipped = true);
       gameState.phase = "command_select";
@@ -479,24 +482,24 @@ function revealNextCard() {
     // --- マルチプレイヤー（対人戦）の処理 ---
     const myCards = gameState[myRole].cards;
 
-    if (gameState.revealedCount < myCards.length) {
+    if (gameState.revealedCount < 3) {
       myCards[gameState.revealedCount].isFlipped = true;
       gameState.revealedCount++;
     }
 
-    if (gameState.revealedCount >= myCards.length) {
-      gameState.phase = "command_select";
-      addLogMessage("⚔️ あなたの思想家が出揃いました！コマンドを選択してください。");
+    if (gameState.revealedCount >= 3) {
+      addLogMessage("⚔️ あなたの思想家が出揃いました！相手の準備を待っています...");
       
-      // Firebaseへ自分のめくり状態を同期
+      // 自分のカードがめくられた状態を Firebase に同期
       if (roomRef) {
-        roomRef.set(sanitizeObject(gameState));
+        roomRef.child(`${myRole}/cards`).set(sanitizeObject(myCards));
       }
     }
   }
 
   updateGameUI();
 }
+
 
 // undefinedなプロパティを完全に除去する安全化関数
 function sanitizeObject(obj) {
