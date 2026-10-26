@@ -739,7 +739,31 @@ function processBattlePhase() {
   // ▼ コマンドをリセットしてUIを更新
   gameState.p1.cmd = null;
   gameState.p2.cmd = null;
+// ▼ 勝敗チェック（全滅判定）
+  const p1Alive = gameState.p1.cards.some(c => c.hp > 0);
+  const p2Alive = gameState.p2.cards.some(c => c.hp > 0);
 
+  if (!p1Alive || !p2Alive) {
+    gameState.phase = "finished";
+
+    if (!p1Alive && !p2Alive) {
+      addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+    } else if (!p2Alive) {
+      // P1が勝利した場合のログ表示切り替え
+      const winMsg = isCpuMode ? "🎉 Victory！ あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
+      addLogMessage(winMsg);
+    } else {
+      // P2が勝利した場合のログ表示切り替え
+      const loseMsg = isCpuMode ? "💀 Defeat... CPUの勝利です。" : "🎉 プレイヤー2 (P2) の勝利です！";
+      addLogMessage(loseMsg);
+    }
+    
+    // コマンド入力をリセットしてUI描画後、処理を終了
+    gameState.p1.cmd = null;
+    gameState.p2.cmd = null;
+    updateGameUI();
+    return; // ターンを進めずにここで終了
+  }
   gameState.turnCount++;
 
   updateGameUI();
