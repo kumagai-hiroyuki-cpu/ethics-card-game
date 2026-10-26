@@ -634,9 +634,9 @@ function submitCommand(type) {
   // 思想家選択ドロップダウン（select要素）を自動探査
   let actorSelect = document.getElementById("actor-select") || 
                     document.getElementById("select-actor") || 
-                    document.getElementById("my-actor-select");
+                    document.getElementById("my-actor-select") ||
+                    document.getElementById("attacker-select");
 
-  // もしIDで見つからない場合、DOMから直接select要素を取得
   if (!actorSelect) {
     actorSelect = document.querySelector("#action-area select") || document.querySelector("select");
   }
@@ -649,49 +649,25 @@ function submitCommand(type) {
   const actorIndex = parseInt(actorSelect.value, 10) || 0;
   console.log("② 選択されたアクターインデックス:", actorIndex);
 
+  // applyAction側の仕様(cmd.attacker)に合わせてキー名を決定
   const cmd = {
     type: type,
-    actorIndex: actorIndex
+    attacker: actorIndex
   };
 
   if (isCpuMode) {
+    // プレイヤーのコマンドを設定
     gameState[myRole].cmd = cmd;
 
-    // CPUのランダム選択
-    const enemyRole = myRole === "p1" ? "p2" : "p1";
-    const aliveEnemyIndices = gameState[enemyRole].cards
-      .map((c, i) => c.hp > 0 ? i : null)
-      .filter(i => i !== null);
-    
-    const randomActor = aliveEnemyIndices.length > 0 
-      ? aliveEnemyIndices[Math.floor(Math.random() * aliveEnemyIndices.length)] 
-      : 0;
-    const randomType = Math.random() < 0.3 ? "skill" : "attack";
+    // CPUのコマンドを自動生成
+    generateCpuCommand();
 
-    gameState[enemyRole].cmd = {
-      type: randomType,
-      actorIndex: randomActor
-    };
-
-   console.log("③ 両者のコマンドがセットされました。ターン解決へ進みます");
+    console.log("③ 両者のコマンドがセットされました。ターン解決(processBattlePhase)へ進みます");
     
-    // ターン解決処理の呼び出し（主要な関数名パターンをカバー）
-    if (typeof resolveCpuTurn === 'function') {
-      resolveCpuTurn();
-    } else if (typeof resolveTurn === 'function') {
-      resolveTurn();
-    } else if (typeof processTurn === 'function') {
-      processTurn();
-    } else if (typeof executeTurn === 'function') {
-      executeTurn();
-    } else if (typeof resolveCpuBattle === 'function') {
-      resolveCpuBattle();
-    } else if (typeof executeBattle === 'function') {
-      executeBattle();
-    } else {
-      console.log("エラー: ターン解決関数が見つかりません。v3.html内のターン処理関数名を確認してください。");
-    }
+    // CPU戦のターン解決処理を実行
+    processBattlePhase();
   } else {
+    // オンライン対戦の場合（Firebaseへ送信）
     roomRef.child(myRole + "/cmd").set(cmd);
   }
 
