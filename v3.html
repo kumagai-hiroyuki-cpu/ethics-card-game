@@ -673,17 +673,23 @@ function submitCommand(type) {
       actorIndex: randomActor
     };
 
-    console.log("③ 両者のコマンドがセットされました。ターン解決へ進みます");
+   console.log("③ 両者のコマンドがセットされました。ターン解決へ進みます");
     
-    // ターン解決処理の呼び出し（関数名の揺れに対応）
+    // ターン解決処理の呼び出し（主要な関数名パターンをカバー）
     if (typeof resolveCpuTurn === 'function') {
       resolveCpuTurn();
     } else if (typeof resolveTurn === 'function') {
       resolveTurn();
     } else if (typeof processTurn === 'function') {
       processTurn();
+    } else if (typeof executeTurn === 'function') {
+      executeTurn();
+    } else if (typeof resolveCpuBattle === 'function') {
+      resolveCpuBattle();
+    } else if (typeof executeBattle === 'function') {
+      executeBattle();
     } else {
-      console.log("エラー: ターン解決関数（resolveCpuTurn / resolveTurn / processTurn）が見つかりません！");
+      console.log("エラー: ターン解決関数が見つかりません。v3.html内のターン処理関数名を確認してください。");
     }
   } else {
     roomRef.child(myRole + "/cmd").set(cmd);
