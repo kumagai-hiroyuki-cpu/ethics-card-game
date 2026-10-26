@@ -426,26 +426,30 @@ function applyTeamSynergy(cards, teamName) {
 
 // === CPU対戦開始 ===
 function startCpuBattle() {
+  if (!cardDatabase.length) return alert("カードデータを読み込み中です。少々お待ちください。");
+  
   isCpuMode = true;
   myRole = "p1";
-  
-  // ランダムに3枚ずつ選出する既存の処理...
-  const p1Cards = getRandomCards(3);
-  const p2Cards = getRandomCards(3);
+  currentLogs = [];
 
-  // 全カードに初期状態（非表示）を設定
-  [...p1Cards, ...p2Cards].forEach(card => {
-    card.isFlipped = false;
-  });
+  const shuffled = [...cardDatabase].sort(() => 0.5 - Math.random());
+  const p1Cards = shuffled.slice(0, 3).map(c => ({ ...c, hp: c.maxHp, atk: c.atk, usedSkill: false, isFlipped: false }));
+  const p2Cards = shuffled.slice(3, 6).map(c => ({ ...c, hp: c.maxHp, atk: c.atk, usedSkill: false, isFlipped: false }));
+
+  applyTeamSynergy(p1Cards, "あなた");
+  applyTeamSynergy(p2Cards, "CPU");
 
   gameState = {
-    phase: "card_reveal", // ▼ めくりフェーズからスタート
-    revealedCount: 0,     // ▼ めくった枚数 (0〜6)
     turnCount: 1,
     p1: { cards: p1Cards, cmd: null },
     p2: { cards: p2Cards, cmd: null },
-    logs: []
+    phase: "card_reveal", // めくりフェーズから開始
+    revealedCount: 0,     // めくった枚数
+    logs: currentLogs
   };
+
+  const enemyTitleEl = document.getElementById("enemy-title");
+  if (enemyTitleEl) enemyTitleEl.innerText = "CPUチーム";
 
   addLogMessage("🎮 CPU対戦が開始されました！「カードをめくる」ボタンを押してください。");
   updateGameUI();
