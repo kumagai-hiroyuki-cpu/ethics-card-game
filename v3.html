@@ -631,17 +631,22 @@ function submitCommand(type) {
     return;
   }
 
-  // idの表記揺れ（actor-select, select-actor, my-actor-select等）を自動判定
-  const actorSelect = document.getElementById("actor-select") || 
-                      document.getElementById("select-actor") || 
-                      document.getElementById("my-actor-select");
+  // 思想家選択ドロップダウン（select要素）を自動探査
+  let actorSelect = document.getElementById("actor-select") || 
+                    document.getElementById("select-actor") || 
+                    document.getElementById("my-actor-select");
+
+  // もしIDで見つからない場合、DOMから直接select要素を取得
+  if (!actorSelect) {
+    actorSelect = document.querySelector("#action-area select") || document.querySelector("select");
+  }
 
   if (!actorSelect) {
-    console.log("エラー: 思想家選択用のselect要素（actor-selectなど）が見つかりません");
+    console.log("エラー: 思想家選択用のselect要素が見つかりません");
     return;
   }
 
-  const actorIndex = parseInt(actorSelect.value, 10);
+  const actorIndex = parseInt(actorSelect.value, 10) || 0;
   console.log("② 選択されたアクターインデックス:", actorIndex);
 
   const cmd = {
@@ -658,7 +663,9 @@ function submitCommand(type) {
       .map((c, i) => c.hp > 0 ? i : null)
       .filter(i => i !== null);
     
-    const randomActor = aliveEnemyIndices[Math.floor(Math.random() * aliveEnemyIndices.length)];
+    const randomActor = aliveEnemyIndices.length > 0 
+      ? aliveEnemyIndices[Math.floor(Math.random() * aliveEnemyIndices.length)] 
+      : 0;
     const randomType = Math.random() < 0.3 ? "skill" : "attack";
 
     gameState[enemyRole].cmd = {
@@ -666,14 +673,17 @@ function submitCommand(type) {
       actorIndex: randomActor
     };
 
-    console.log("③ 両者のコマンドがセットされました。ターン解決に進みます");
+    console.log("③ 両者のコマンドがセットされました。ターン解決へ進みます");
     
+    // ターン解決処理の呼び出し（関数名の揺れに対応）
     if (typeof resolveCpuTurn === 'function') {
       resolveCpuTurn();
     } else if (typeof resolveTurn === 'function') {
       resolveTurn();
+    } else if (typeof processTurn === 'function') {
+      processTurn();
     } else {
-      console.log("エラー: ターン解決を行う関数（resolveCpuTurn または resolveTurn）が見つかりません！");
+      console.log("エラー: ターン解決関数（resolveCpuTurn / resolveTurn / processTurn）が見つかりません！");
     }
   } else {
     roomRef.child(myRole + "/cmd").set(cmd);
