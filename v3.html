@@ -504,12 +504,16 @@ function updateGameUI() {
     roomRef.update({ phase: "command_select" });
   }
 
-  if (gameState.phase !== "waiting_p2") {
+ if (gameState.phase !== "waiting_p2") {
     document.getElementById("setup-area").style.display = "none";
     document.getElementById("game-area").style.display = "flex";
-    document.getElementById("action-area").style.display = "block";
-  }
 
+    if (gameState.phase === "finished") {
+      document.getElementById("action-area").style.display = "none";
+    } else {
+      document.getElementById("action-area").style.display = "block";
+    }
+  }
   const roleEl = document.getElementById("my-role");
   if (roleEl) roleEl.innerText = isCpuMode ? "あなた" : myRole.toUpperCase();
   
