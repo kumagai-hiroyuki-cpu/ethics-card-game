@@ -1058,7 +1058,7 @@ const specialSkillLogic = {
     addLogMessage(`☯️ [${pName}] ${attacker.name} の「風土改変」！ 敵全体のHPとATKを半減させ、和辻自身が（HP+${totalStolenHp} / ATK+${totalStolenAtk}）奪い取った！`);
   },
 
-  "miyoshi_keiko": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "miyoshi_keiko": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = attacker.atk;
     target.hp -= dmg;
     if (target.hp < 0) target.hp = 0;
