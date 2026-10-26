@@ -732,12 +732,16 @@ function processBattlePhase() {
       if (card.hp > 0) {
         triggerPassive("onTurnEnd", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
       }
-    });
-  });
+     });
+// ▼ コマンドをリセットしてUIを更新
+  gameState.p1.cmd = null;
+  gameState.p2.cmd = null;
 
   gameState.turnCount++;
-  // （以下略）
+
+  updateGameUI();
 }
+    
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
