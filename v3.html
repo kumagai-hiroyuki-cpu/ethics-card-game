@@ -532,34 +532,19 @@ function sanitizeObject(obj) {
 
 // Firebaseのデータ監視関数（部屋の同期処理）
 // 1. 部屋の通信・同期を担当する関数
-function listenToRoom(roomId) {
+function listenToRoom(id) {
+  // CPUモードの場合、または roomRef が取得できない場合は Firebase の同期処理を行わない
+  if (isCpuMode) return;
+
+  const roomRef = db ? db.ref("rooms/" + id) : null;
+  if (!roomRef) return;
+
   roomRef.on("value", (snapshot) => {
     const data = snapshot.val();
-    if (!data) return;
-
-    // 自分のめくりカウンター（revealedCount）が相手のデータで上書きされるのを防ぐ
-    const localRevealedCount = (gameState && typeof gameState.revealedCount === "number") 
-      ? gameState.revealedCount 
-      : 0;
-
-    gameState = data;
-
-    // 対人戦の場合、ローカル（手元）のめくりカウントを保持する
-    if (!isCpuMode && gameState.phase === "card_reveal") {
-      gameState.revealedCount = localRevealedCount;
+    if (data) {
+      gameState = data;
+      updateGameUI();
     }
-
-    if (gameState.phase === "waiting_p2" && myRole === "p1") {
-      const connEl = document.getElementById("connection-status");
-      if (connEl) connEl.innerText = "🏠 部屋作成完了。P2の参加を待っています...";
-    } else {
-      const setupEl = document.getElementById("setup-area");
-      const gameEl = document.getElementById("game-area");
-      if (setupEl) setupEl.style.display = "none";
-      if (gameEl) gameEl.style.display = "block";
-    }
-
-    updateGameUI();
   });
 }
 
