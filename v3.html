@@ -588,7 +588,7 @@ function joinRoom(role) {
 
     roomRef.set(sanitizeObject(initialGameState));
     listenToRoom(roomId);
-  } else {
+    } else {
     // P2: 部屋に参加
     listenToRoom(roomId);
     roomRef.once("value", (snapshot) => {
@@ -596,13 +596,12 @@ function joinRoom(role) {
       if (data && data.phase === "waiting_p2") {
         roomRef.update({
           phase: "card_reveal",
-          logs: [...(data.logs || []), "⚔️ P2が参加しました！カードをめくってください。"]
+          logs: [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"]
         });
       }
     });
   }
-}
-function updateGameUI() {
+}function updateGameUI() {
   if (!gameState) return;
 
   if (gameState.logs) {
