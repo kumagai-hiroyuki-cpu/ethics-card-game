@@ -730,7 +730,7 @@ function processBattlePhase() {
   [gameState.p1, gameState.p2].forEach(pObj => {
     const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1;
     pObj.cards.forEach(card => {
-      if (card.hp > 0) {
+  if (card.hp > 0) {
         triggerPassive("onTurnEnd", card, pObj, enemyObj);
       }
     });
