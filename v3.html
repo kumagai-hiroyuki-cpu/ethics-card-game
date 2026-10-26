@@ -737,11 +737,11 @@ function processBattlePhase() {
   gameState.p1.cmd = null;
   gameState.p2.cmd = null;
 
-  gameState.turnCount++;
+gameState.turnCount++;
 
   updateGameUI();
 }
-    
+
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
@@ -752,7 +752,7 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   if (attacker.atkBuff) {
     finalDamage *= 2;
     attacker.atkBuff = false;
-    addLogMessage(`💨 ${attacker.name} の攻撃力が2倍にアップしている！`);
+    addLogMessage("💨 " + attacker.name + " の攻撃力が2倍にアップしている！");
   }
 
   if (target.defenseBuff) {
