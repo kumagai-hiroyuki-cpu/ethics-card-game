@@ -619,7 +619,7 @@ function joinRoom(role) {
 
     roomRef.set(sanitizeObject(initialGameState));
     listenToRoom(roomId);
-    } else {
+  } else {
     // P2: 部屋に参加
     listenToRoom(roomId);
     roomRef.once("value", (snapshot) => {
@@ -632,7 +632,7 @@ function joinRoom(role) {
       }
     });
   }
-
+}
 function updateGameUI() {
   if (!gameState) return;
 
@@ -1081,7 +1081,7 @@ function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activ
     addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。");
   }
 }
-｝
+}
 </script>
 </body>
 </html>
