@@ -726,22 +726,24 @@ function processBattlePhase() {
   applyAction(p1Name, gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
   applyAction(p2Name, gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
 
-  // ▼▼ 【ターン終了時パッシブ】ここで呼び出し ▼▼
+// ▼▼ 【ターン終了時パッシブ】呼び出し ▼▼
   [gameState.p1, gameState.p2].forEach(pObj => {
+    const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1;
     pObj.cards.forEach(card => {
       if (card.hp > 0) {
-        triggerPassive("onTurnEnd", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
+        triggerPassive("onTurnEnd", card, pObj, enemyObj);
       }
-     });
-// ▼ コマンドをリセットしてUIを更新
+    });
+  });
+
+  // ▼ コマンドをリセットしてUIを更新
   gameState.p1.cmd = null;
   gameState.p2.cmd = null;
 
-gameState.turnCount++;
+  gameState.turnCount++;
 
   updateGameUI();
 }
-
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   if (!target || target.hp <= 0) return;
 
