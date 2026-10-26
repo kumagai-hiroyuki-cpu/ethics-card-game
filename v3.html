@@ -432,6 +432,7 @@ function startCpuBattle() {
 
   const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
 
+  // 全カードを isFlipped: false （裏面）で初期化
   const p1Cards = shuffled.slice(0, 3).map(c => ({
     ...c,
     hp: c.hp ?? c.maxHp ?? 100,
@@ -440,7 +441,7 @@ function startCpuBattle() {
     atk: c.atk ?? 20,
     baseAtk: c.baseAtk ?? c.atk ?? 20,
     skillUsed: false,
-    isFlipped: false // 初期値はすべて裏面
+    isFlipped: false // 初期状態はすべて裏
   }));
 
   const p2Cards = shuffled.slice(3, 6).map(c => ({
@@ -451,7 +452,7 @@ function startCpuBattle() {
     atk: c.atk ?? 20,
     baseAtk: c.baseAtk ?? c.atk ?? 20,
     skillUsed: false,
-    isFlipped: false // 初期値はすべて裏面
+    isFlipped: false // 初期状態はすべて裏
   }));
 
   applyTeamSynergy(p1Cards, "P1");
@@ -462,7 +463,7 @@ function startCpuBattle() {
     p1: { cards: p1Cards, cmd: null },
     p2: { cards: p2Cards, cmd: null },
     phase: "card_reveal",
-    revealedCount: 0, // ★ ここを確実に 0 でリセット
+    revealedCount: 0, // 確実に 0 でリセット
     logs: ["⚔️ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
 
