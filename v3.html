@@ -652,20 +652,21 @@ function joinRoom(role) {
     updateSelectOptions(myData.cards);
 
   // updateGameUI 関数内の phase 判定部分
-  if (gameState.phase === "card_reveal") {
+    if (gameState.phase === "card_reveal") {
     document.getElementById("command-inputs").style.display = "none";
     
-    // 自分がまだ3枚めくり終えていない場合にボタンを表示
-    if (gameState.revealedCount < 3) {
+    // まだ3枚めくっていない場合のみボタンを表示
+    if ((gameState.revealedCount || 0) < 3) {
       document.getElementById("wait-msg").innerHTML = `
         <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
-          🃏 カードをめくる (${gameState.revealedCount} / 3)
+          🃏 カードをめくる (${gameState.revealedCount || 0} / 3)
         </button>
       `;
     } else {
       document.getElementById("wait-msg").innerText = "相手の準備完了を待っています...";
     }
   }
+
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
