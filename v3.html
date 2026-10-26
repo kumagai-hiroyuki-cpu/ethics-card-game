@@ -490,21 +490,20 @@ function joinRoom(role) {
     // P1: 部屋を作成
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     
-    // undefined が発生しないよう各プロパティを安全に設定
-    const p1Cards = shuffled.slice(0, 3).map(c => ({
+    // undefined が入らないよう全プロパティの初期値を確実に設定
+    const createCardObject = (c) => ({
       ...c,
-      hp: c.maxHp || 100,
-      baseAtk: c.atk || 20,
+      hp: c.hp ?? c.maxHp ?? 100,
+      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+      maxHp: c.maxHp ?? 100,
+      atk: c.atk ?? 20,
+      baseAtk: c.baseAtk ?? c.atk ?? 20,
       skillUsed: false,
       isFlipped: false
-    }));
-    const p2Cards = shuffled.slice(3, 6).map(c => ({
-      ...c,
-      hp: c.maxHp || 100,
-      baseAtk: c.atk || 20,
-      skillUsed: false,
-      isFlipped: false
-    }));
+    });
+
+    const p1Cards = shuffled.slice(0, 3).map(createCardObject);
+    const p2Cards = shuffled.slice(3, 6).map(createCardObject);
 
     applyTeamSynergy(p1Cards, "P1");
     applyTeamSynergy(p2Cards, "P2");
