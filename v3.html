@@ -568,13 +568,23 @@ function updateGameUI() {
 
     updateSelectOptions(myData.cards);
 
-    if (myData.cmd) {
-      document.getElementById("command-inputs").style.display = "none";
-      document.getElementById("wait-msg").innerText = "⏳ 相手のコマンド決定を待っています...";
-    } else {
-      document.getElementById("command-inputs").style.display = "block";
-      document.getElementById("wait-msg").innerText = "⚔️ コマンドを選択してください";
-    }
+    if (gameState.phase === "card_reveal") {
+    // ▼ めくりフェーズ時：「めくるボタン」を表示し、通常コマンドは隠す
+    document.getElementById("command-inputs").style.display = "none";
+    document.getElementById("wait-msg").innerHTML = `
+      <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
+        🃏 カードをめくる (${gameState.revealedCount} / 6)
+      </button>
+    `;
+  } else if (myData.cmd) {
+    // ▼ コマンド送信済み時
+    document.getElementById("command-inputs").style.display = "none";
+    document.getElementById("wait-msg").innerText = "⏳ 相手のコマンド決定を待っています...";
+  } else {
+    // ▼ 通常コマンド選択時
+    document.getElementById("command-inputs").style.display = "block";
+    document.getElementById("wait-msg").innerText = "⚔️ コマンドを選択してください";
+  }
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
