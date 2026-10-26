@@ -730,23 +730,6 @@ function renderCard(c, isEnemy) {
     </div>
   `;
 }
-    // ▼ オープン済み（表面）の場合の表示（既存処理）
-    const hpPercent = Math.max(0, (c.hp / c.maxHp) * 100);
-    const synergyClass = c.hasSynergy ? 'synergy-active' : '';
-    return `
-      <div class="card-container ${c.hp === 0 ? 'defeated' : ''} ${synergyClass}" onclick="openModal('${c.id}')">
-        <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image';">
-        <div class="card-info">
-          <div class="card-name">${c.hasSynergy ? '🤝 ' : ''}${c.name}</div>
-          <div class="hp-bar">
-            <div class="hp-fill" style="width: ${hpPercent}%;"></div>
-            <div class="hp-text">${c.hp}/${c.maxHp}</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
 
 function updateSelectOptions(myCards) {
   const atkSelect = document.getElementById("attacker-select");
