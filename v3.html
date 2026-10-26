@@ -549,15 +549,15 @@ function updateGameUI() {
 
     updateSelectOptions(myData.cards);
 
-    if (gameState.phase === "card_reveal") {
+  if (gameState.phase === "card_reveal") {
     // ▼ めくりフェーズ時：「めくるボタン」を表示し、通常コマンドは隠す
     document.getElementById("command-inputs").style.display = "none";
     document.getElementById("wait-msg").innerHTML = `
       <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
-        🃏 カードをめくる (${gameState.revealedCount} / 6)
+        🃏 カードをめくる (${gameState.revealedCount} / 3)
       </button>
     `;
-  } else if (myData.cmd) {
+  }else if (myData.cmd) {
     // ▼ コマンド送信済み時
     document.getElementById("command-inputs").style.display = "none";
     document.getElementById("wait-msg").innerText = "⏳ 相手のコマンド決定を待っています...";
