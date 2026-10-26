@@ -632,45 +632,33 @@ function joinRoom(role) {
       }
     });
   }
-}function updateGameUI() {
+}
+function updateGameUI() {
   if (!gameState) return;
 
-  if (gameState.logs) {
-    currentLogs = gameState.logs;
-    renderLogs(gameState.logs);
+  // 1. P1 (あなた/相手) のカード描画
+  const p1Container = document.getElementById("p1-cards"); // または "p1-area"
+  if (p1Container && gameState.p1 && gameState.p1.cards) {
+    const isP1Enemy = (myRole === "p2");
+    p1Container.innerHTML = gameState.p1.cards
+      .map(card => renderCard(card, isP1Enemy))
+      .join("");
   }
 
-  if (!isCpuMode && gameState.phase === "waiting_p2" && myRole === "p2") {
-    roomRef.update({ phase: "command_select" });
+  // 2. P2 (相手/あなた) のカード描画
+  const p2Container = document.getElementById("p2-cards"); // または "p2-area"
+  if (p2Container && gameState.p2 && gameState.p2.cards) {
+    const isP2Enemy = (myRole === "p1");
+    p2Container.innerHTML = gameState.p2.cards
+      .map(card => renderCard(card, isP2Enemy))
+      .join("");
   }
 
- if (gameState.phase !== "waiting_p2") {
-    document.getElementById("setup-area").style.display = "none";
-    document.getElementById("game-area").style.display = "flex";
-
-    if (gameState.phase === "finished") {
-      document.getElementById("action-area").style.display = "none";
-    } else {
-      document.getElementById("action-area").style.display = "block";
-    }
-  }
-  const roleEl = document.getElementById("my-role");
-  if (roleEl) roleEl.innerText = isCpuMode ? "あなた" : myRole.toUpperCase();
-  
-  const myData = gameState[myRole];
-  const enemyData = gameState[myRole === "p1" ? "p2" : "p1"];
-
-  if (myData && enemyData) {
-    renderCards("my-cards", myData.cards);
-    renderCards("enemy-cards", enemyData.cards);
-
-    updateSelectOptions(myData.cards);
-
-  // updateGameUI 関数内の phase 判定部分
-    if (gameState.phase === "card_reveal") {
+  // 3. フェーズに応じた表示制御
+  if (gameState.phase === "card_reveal") {
     document.getElementById("command-inputs").style.display = "none";
+    document.getElementById("wait-msg").style.display = "block";
     
-    // まだ3枚めくっていない場合のみボタンを表示
     if ((gameState.revealedCount || 0) < 3) {
       document.getElementById("wait-msg").innerHTML = `
         <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
@@ -680,8 +668,14 @@ function joinRoom(role) {
     } else {
       document.getElementById("wait-msg").innerText = "相手の準備完了を待っています...";
     }
+  } else if (gameState.phase === "command_select") {
+    document.getElementById("command-inputs").style.display = "block";
+    document.getElementById("wait-msg").style.display = "none";
   }
 
+  // ログの更新
+  updateLogsUI();
+}
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
