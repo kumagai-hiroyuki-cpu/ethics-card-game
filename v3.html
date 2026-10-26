@@ -566,7 +566,14 @@ function listenToRoom(roomId) {
 function sanitizeObject(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
 }
-
+const initialGameState = {
+  phase: "waiting_p2",
+  turn: 1,
+  p1: { name: "P1", cards: [], cmd: null },
+  p2: { name: "P2", cards: [], cmd: null },
+  logs: ["部屋が作成されました。P2の参加を待っています..."],
+  revealedCount: 0
+};
 // 2. 部屋の作成・参加を担当する関数
 function joinRoom(id) {
   roomId = id;
