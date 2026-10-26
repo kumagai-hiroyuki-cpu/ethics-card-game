@@ -758,13 +758,13 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   if (target.defenseBuff) {
     finalDamage = Math.floor(finalDamage / 2);
     target.defenseBuff = false;
-    addLogMessage(`🌍 ${target.name} は土の盾でダメージを半減した！`);
+    addLogMessage("🌍 " + target.name + " は土の盾でダメージを半減した！");
   }
 
   if (target.fixedDamageVal !== undefined && target.fixedDamageVal !== null) {
     finalDamage = target.fixedDamageVal;
     target.fixedDamageVal = null;
-    addLogMessage(`📐 ${target.name} は「決定論」により、被ダメージが ${finalDamage} に固定された！`);
+    addLogMessage("📐 " + target.name + " は「決定論」により、被ダメージが " + finalDamage + " に固定された！");
   }
 
   // ② 被弾時パッシブの処理
@@ -781,11 +781,11 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   target.hp -= finalDamage;
   if (target.hp < 0) target.hp = 0; 
 
-  addLogMessage(`⚔️ [${pName}] ${attacker.name} の攻撃！ ${target.name} に ${finalDamage} のダメージ！${effText}`);
+  addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
 
   // ④ 死亡時パッシブの処理
   if (target.hp === 0) {
-    addLogMessage(`💀 ${target.name} は倒れた！`);
+    addLogMessage("💀 " + target.name + " は倒れた！");
     if (typeof triggerPassive === "function") {
       triggerPassive("onDeath", target, targetObj, actorObj);
     }
