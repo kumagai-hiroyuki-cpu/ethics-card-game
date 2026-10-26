@@ -458,12 +458,12 @@ function startCpuBattle() {
   applyTeamSynergy(p1Cards, "P1");
   applyTeamSynergy(p2Cards, "P2");
 
-  gameState = {
+ gameState = {
     turnCount: 1,
-    p1: { cards: p1Cards, cmd: null },
-    p2: { cards: p2Cards, cmd: null },
+    p1: { name: "あなた", cards: p1Cards, cmd: null },
+    p2: { name: "CPU", cards: p2Cards, cmd: null },
     phase: "card_reveal",
-    revealedCount: 0, // 確実に 0 でリセット
+    revealedCount: 0,
     logs: ["⚔️ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
 
@@ -471,6 +471,7 @@ function startCpuBattle() {
   document.getElementById("game-area").style.display = "block";
 
   updateGameUI();
+  triggerBattleStartPassives();
 }
 
 
