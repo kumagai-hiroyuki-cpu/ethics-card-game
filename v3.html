@@ -636,44 +636,45 @@ function joinRoom(role) {
 function updateGameUI() {
   if (!gameState) return;
 
-  // 1. P1 (あなた/相手) のカード描画
-  const p1Container = document.getElementById("p1-cards"); // または "p1-area"
-  if (p1Container && gameState.p1 && gameState.p1.cards) {
+  // 1. P1・P2のカード描画（HTML上の要素名に合わせて安全に描画）
+  const p1Area = document.getElementById("p1-cards") || document.getElementById("p1-area");
+  const p2Area = document.getElementById("p2-cards") || document.getElementById("p2-area");
+
+  if (p1Area && gameState.p1 && gameState.p1.cards) {
     const isP1Enemy = (myRole === "p2");
-    p1Container.innerHTML = gameState.p1.cards
-      .map(card => renderCard(card, isP1Enemy))
-      .join("");
+    p1Area.innerHTML = gameState.p1.cards.map(c => renderCard(c, isP1Enemy)).join("");
   }
 
-  // 2. P2 (相手/あなた) のカード描画
-  const p2Container = document.getElementById("p2-cards"); // または "p2-area"
-  if (p2Container && gameState.p2 && gameState.p2.cards) {
+  if (p2Area && gameState.p2 && gameState.p2.cards) {
     const isP2Enemy = (myRole === "p1");
-    p2Container.innerHTML = gameState.p2.cards
-      .map(card => renderCard(card, isP2Enemy))
-      .join("");
+    p2Area.innerHTML = gameState.p2.cards.map(c => renderCard(c, isP2Enemy)).join("");
   }
 
-  // 3. フェーズに応じた表示制御
+  // 2. フェーズに応じたUI表示切替
+  const commandInputs = document.getElementById("command-inputs");
+  const waitMsg = document.getElementById("wait-msg");
+
   if (gameState.phase === "card_reveal") {
-    document.getElementById("command-inputs").style.display = "none";
-    document.getElementById("wait-msg").style.display = "block";
-    
-    if ((gameState.revealedCount || 0) < 3) {
-      document.getElementById("wait-msg").innerHTML = `
-        <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
-          🃏 カードをめくる (${gameState.revealedCount || 0} / 3)
-        </button>
-      `;
-    } else {
-      document.getElementById("wait-msg").innerText = "相手の準備完了を待っています...";
+    if (commandInputs) commandInputs.style.display = "none";
+    if (waitMsg) {
+      waitMsg.style.display = "block";
+      const count = gameState.revealedCount || 0;
+      if (count < 3) {
+        waitMsg.innerHTML = `
+          <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px;">
+            🃏 カードをめくる (${count} / 3)
+          </button>
+        `;
+      } else {
+        waitMsg.innerText = "相手の準備完了を待っています...";
+      }
     }
   } else if (gameState.phase === "command_select") {
-    document.getElementById("command-inputs").style.display = "block";
-    document.getElementById("wait-msg").style.display = "none";
+    if (commandInputs) commandInputs.style.display = "block";
+    if (waitMsg) waitMsg.style.display = "none";
   }
 
-  // ログの更新
+  // ログ描画
   updateLogsUI();
 }
 // 戦闘開始時に1度だけ実行する関数の例
