@@ -515,7 +515,17 @@ function listenToRoom(roomId) {
     const data = snapshot.val();
     if (!data) return;
 
+    // 自分のめくりカウンター（revealedCount）が相手のデータで上書きされるのを防ぐ
+    const localRevealedCount = (gameState && typeof gameState.revealedCount === "number") 
+      ? gameState.revealedCount 
+      : 0;
+
     gameState = data;
+
+    // 対人戦の場合、ローカル（手元）のめくりカウントを保持する
+    if (!isCpuMode && gameState.phase === "card_reveal") {
+      gameState.revealedCount = localRevealedCount;
+    }
 
     if (gameState.phase === "waiting_p2" && myRole === "p1") {
       const connEl = document.getElementById("connection-status");
