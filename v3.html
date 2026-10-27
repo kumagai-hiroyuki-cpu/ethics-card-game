@@ -478,45 +478,51 @@ function startCpuBattle() {
 function revealNextCard() {
   if (!gameState || gameState.phase !== "card_reveal") return;
 
-  if (typeof gameState.revealedCount !== "number") {
-    gameState.revealedCount = 0;
+  const myData = gameState[myRole];
+  if (!myData || !myData.cards) return;
+
+  // 未オープン（isFlipped: false）の最初のカードを探す
+  const unrevealedCard = myData.cards.find(c => !c.isFlipped);
+
+  if (unrevealedCard) {
+    unrevealedCard.isFlipped = true;
   }
 
+  // 自分の全カードがオープンされたかチェック
+  const allMyFlipped = myData.cards.every(c => c.isFlipped);
+
   if (isCpuMode) {
-    const p1Cards = gameState.p1.cards;
-    const p2Cards = gameState.p2.cards;
-
-    // 自分のカードを1枚めくる
-    if (gameState.revealedCount < 3) {
-      p1Cards[gameState.revealedCount].isFlipped = true;
-      gameState.revealedCount++;
-    }
-
-    // 3枚めくり終えたらCPUカードを全オープンしてコマンド選択へ
-    if (gameState.revealedCount >= 3) {
-      p2Cards.forEach(c => c.isFlipped = true);
+    if (allMyFlipped) {
+      // CPU戦：相手（CPU）のカードも全オープンにしてコマンド選択へ
+      gameState.p2.cards.forEach(c => c.isFlipped = true);
       gameState.phase = "command_select";
       addLogMessage("⚔️ すべての思想家が登場しました！コマンドを選択してください。");
     }
+    updateGameUI();
   } else {
-    // マルチプレイヤー時
-    const myCards = gameState[myRole].cards;
+    // オンライン対戦：Firebaseへ自分のカード状態を更新
+    const enemyRole = myRole === "p1" ? "p2" : "p1";
+    const enemyData = gameState[enemyRole];
+    const allEnemyFlipped = enemyData && enemyData.cards ? enemyData.cards.every(c => c.isFlipped) : false;
 
-    if (gameState.revealedCount < 3) {
-      myCards[gameState.revealedCount].isFlipped = true;
-      gameState.revealedCount++;
+    let updates = {};
+    updates[`rooms/${roomId}/${myRole}/cards`] = sanitizeObject(myData.cards);
+
+    // お互いに3枚すべてめくり終わっていたらコマンド選択フェーズへ移行
+    if (allMyFlipped && allEnemyFlipped) {
+      updates[`rooms/${roomId}/phase`] = "command_select";
+      updates[`rooms/${roomId}/logs`] = [...(gameState.logs || []), "⚔️ お互いの準備が完了しました！コマンドを選択してください。"];
+    } else if (allMyFlipped) {
+      addLogMessage("⚔️ あなたの思想家が出揃いました！相手の準備を待っています...");
+      updates[`rooms/${roomId}/logs`] = gameState.logs || [];
     }
 
-    if (gameState.revealedCount >= 3) {
-      addLogMessage("⚔️ あなたの思想家が出揃いました！相手の準備を待っています...");
-      if (roomRef) {
-        roomRef.child(`${myRole}/cards`).set(sanitizeObject(myCards));
-      }
+    if (db && roomId) {
+      db.ref().update(updates);
     }
   }
-
-  updateGameUI();
 }
+
 
 
 
