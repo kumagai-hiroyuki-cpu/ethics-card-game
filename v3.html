@@ -686,22 +686,26 @@ function updateGameUI() {
       waitMsg.style.display = "block";
       waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
     }
-  } else if (gameState.phase === "card_reveal") {
-    // カードめくりフェーズ（P2が参加したら自動でここに移る）
+   } else if (gameState.phase === "card_reveal") {
     if (commandInputs) commandInputs.style.display = "none";
     if (waitMsg) {
       waitMsg.style.display = "block";
-      const count = gameState.revealedCount || 0;
-      if (count < 3) {
+      
+      const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2;
+      const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c.isFlipped).length : 0;
+
+      if (myFlippedCount < 3) {
         waitMsg.innerHTML = `
           <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            🃏 カードをめくる (${count} / 3)
+            🃏 カードをめくる (${myFlippedCount} / 3)
           </button>
         `;
       } else {
-        waitMsg.innerText = isCpuMode ? "対戦準備完了！コマンドを選択してください。" : "相手の準備完了を待っています...";
+        waitMsg.innerText = "相手の準備完了を待っています...";
       }
     }
+  }
+
   } else if (gameState.phase === "command_select") {
     if (commandInputs) commandInputs.style.display = "block";
     if (waitMsg) waitMsg.style.display = "none";
