@@ -583,6 +583,7 @@ function joinRoom(id) {
 }
 
 // === UI更新処理 ===
+// === UI更新処理 ===
 function updateGameUI() {
   if (!gameState) return;
 
@@ -632,11 +633,16 @@ function updateGameUI() {
   } else if (gameState.phase === "command_select") {
     if (commandInputs) commandInputs.style.display = "block";
     if (waitMsg) waitMsg.style.display = "none";
+    
+    // 【追加】ここで選択肢を更新しないとドロップダウンが空になる
+    if (myPlayerData && myPlayerData.cards) {
+      updateSelectOptions(myPlayerData.cards);
+    }
   }
 
-  // 4. ログ更新
-  if (typeof updateLogsUI === "function") {
-    updateLogsUI();
+  // 4. ログ更新（存在しないupdateLogsUIではなく、renderLogsを呼ぶ）
+  if (typeof renderLogs === "function") {
+    renderLogs(currentLogs.length > 0 ? currentLogs : (gameState.logs || []));
   }
 }
 
