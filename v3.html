@@ -978,13 +978,23 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
   // ③ mult を使ったログ用テキスト生成
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
   
-  target.hp -= finalDamage;
-  if (target.hp < 0) target.hp = 0; 
+ // currentHP または hp から現在の値を取得
+const currentHpVal = target.currentHP ?? target.hp ?? 0;
+const newHp = Math.max(0, currentHpVal - finalDamage);
 
-  addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
+// 両方のプロパティに最新のHPをセット（これでUIが確実に更新されます）
+target.currentHP = newHp;
+target.hp = newHp;
 
-  // ④ 死亡時パッシブの処理
-  if (target.hp === 0) {
+addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
+
+// ④ 死亡時パッシブの処理
+if (newHp === 0) {
+  addLogMessage("💀 " + target.name + " は倒れた！");
+  if (typeof triggerPassive === "function") {
+    triggerPassive("onDeath", target, targetObj, actorObj);
+  }
+}
     addLogMessage("💀 " + target.name + " は倒れた！");
     if (typeof triggerPassive === "function") {
       triggerPassive("onDeath", target, targetObj, actorObj);
