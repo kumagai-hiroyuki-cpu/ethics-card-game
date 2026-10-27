@@ -583,7 +583,6 @@ function joinRoom(id) {
 }
 
 // === UI更新処理 ===
-// === UI更新処理 ===
 function updateGameUI() {
   if (!gameState) return;
 
@@ -1046,6 +1045,35 @@ function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activ
     addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。");
   }
 }
+
+// === カード拡大モーダル表示処理 ===
+function openModal(cardId) {
+  const card = CARD_DATABASE.find(c => c.id === cardId);
+  if (!card) return;
+
+  document.getElementById("modal-img").src = card.image || "https://via.placeholder.com/300x180?text=No+Image";
+  document.getElementById("modal-title").innerText = card.name || "不明";
+  document.getElementById("modal-rank").innerText = card.rank ? `Rank: ${card.rank}` : "";
+  document.getElementById("modal-type").innerText = card.type ? `属性: ${card.type}` : "";
+
+  document.getElementById("modal-active-val").innerText = card.activeVal || 0;
+  document.getElementById("modal-skill-name").innerText = card.skillName || "-";
+  document.getElementById("modal-skill-desc").innerText = card.skillDesc || "-";
+
+  document.getElementById("modal-passive-val").innerText = card.passiveVal || 0;
+  document.getElementById("modal-passive-name").innerText = card.passiveName || "-";
+  document.getElementById("modal-passive-desc").innerText = card.passiveDesc || "-";
+
+  const tags = card.synergyTags ? card.synergyTags.join(" / ") : "なし";
+  document.getElementById("modal-tags").innerText = tags;
+
+  document.getElementById("card-modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("card-modal").style.display = "none";
+}  
+  
 </script>
 </body>
 </html>
