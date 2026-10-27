@@ -666,14 +666,22 @@ function updateGameUI() {
     enemyCardsElem.innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
   }
 
-  // 3. アクションエリア・メッセージ・ボタン制御
+   // 3. アクションエリア・メッセージ・ボタン制御
   const actionArea = document.getElementById("action-area");
   const waitMsg = document.getElementById("wait-msg");
   const commandInputs = document.getElementById("command-inputs");
 
   if (actionArea) actionArea.style.display = "block";
 
-  if (gameState.phase === "card_reveal") {
+  if (gameState.phase === "waiting_p2") {
+    // P2参加待ち状態
+    if (commandInputs) commandInputs.style.display = "none";
+    if (waitMsg) {
+      waitMsg.style.display = "block";
+      waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
+    }
+  } else if (gameState.phase === "card_reveal") {
+    // カードめくりフェーズ（P2が参加したら自動でここに移る）
     if (commandInputs) commandInputs.style.display = "none";
     if (waitMsg) {
       waitMsg.style.display = "block";
@@ -692,11 +700,11 @@ function updateGameUI() {
     if (commandInputs) commandInputs.style.display = "block";
     if (waitMsg) waitMsg.style.display = "none";
     
-    // 【追加】ここで選択肢を更新しないとドロップダウンが空になる
     if (myPlayerData && myPlayerData.cards) {
       updateSelectOptions(myPlayerData.cards);
     }
   }
+
 
   // 4. ログ更新（存在しないupdateLogsUIではなく、renderLogsを呼ぶ）
   if (typeof renderLogs === "function") {
