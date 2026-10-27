@@ -839,7 +839,6 @@ function submitCommand(type) {
   const actorIndex = parseInt(actorSelect.value, 10) || 0;
   console.log("② 選択されたアクターインデックス:", actorIndex);
 
-  // applyAction側の仕様(cmd.attacker)に合わせてキー名を決定
   const cmd = {
     type: type,
     attacker: actorIndex
@@ -858,7 +857,8 @@ function submitCommand(type) {
     processBattlePhase();
   } else {
     // オンライン対戦の場合（Firebaseへ送信）
-    roomRef.child(myRole + "/cmd").set(cmd);
+    // roomRef.child(...) の代わりに確実にdbから直接指定する
+    db.ref("rooms/" + roomId + "/" + myRole + "/cmd").set(cmd);
   }
 
   updateGameUI();
