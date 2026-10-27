@@ -639,6 +639,18 @@ function listenToRoom(id) {
     const data = snapshot.val();
     if (data) {
       gameState = data;
+      
+      // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決して更新
+      if (!isCpuMode && gameState.phase === "command_select") {
+        if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
+          if (myRole === "p1") {
+            processBattlePhase();
+            // 計算後の最新状態をFirebaseへ保存
+            db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+          }
+        }
+      }
+
       updateGameUI();
     }
   });
