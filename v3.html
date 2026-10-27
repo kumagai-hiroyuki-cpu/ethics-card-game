@@ -586,29 +586,33 @@ function joinRoom(id) {
 function updateGameUI() {
   if (!gameState) return;
 
-  // 1. プレイヤー名描画
-  const p1NameElem = document.getElementById("p1-name");
-  const p2NameElem = document.getElementById("p2-name");
-  if (p1NameElem && gameState.p1) p1NameElem.textContent = gameState.p1.name || "あなた";
-  if (p2NameElem && gameState.p2) p2NameElem.textContent = gameState.p2.name || "相手";
-
-  // 2. カード描画
-  const p1Area = document.getElementById("p1-cards") || document.getElementById("p1-area") || document.getElementById("p1-card-list");
-  const p2Area = document.getElementById("p2-cards") || document.getElementById("p2-area") || document.getElementById("p2-card-list");
-
-  if (p1Area && gameState.p1 && gameState.p1.cards) {
-    const isP1Enemy = (myRole === "p2");
-    p1Area.innerHTML = gameState.p1.cards.map(c => renderCard(c, isP1Enemy)).join("");
+  // 1. プレイヤー役割・名前の描画
+  const myRoleElem = document.getElementById("my-role");
+  if (myRoleElem && gameState.p1) {
+    myRoleElem.textContent = myRole === "p1" ? (gameState.p1.name || "あなた") : (gameState.p2.name || "あなた");
   }
 
-  if (p2Area && gameState.p2 && gameState.p2.cards) {
-    const isP2Enemy = (myRole === "p1");
-    p2Area.innerHTML = gameState.p2.cards.map(c => renderCard(c, isP2Enemy)).join("");
+  // 2. 自分のカードと相手のカードの描画
+  const myCardsElem = document.getElementById("my-cards");
+  const enemyCardsElem = document.getElementById("enemy-cards");
+
+  const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2;
+  const enemyPlayerData = myRole === "p1" ? gameState.p2 : gameState.p1;
+
+  if (myCardsElem && myPlayerData && myPlayerData.cards) {
+    myCardsElem.innerHTML = myPlayerData.cards.map(c => renderCard(c, false)).join("");
   }
 
-  // 3. メッセージ・ボタン制御
+  if (enemyCardsElem && enemyPlayerData && enemyPlayerData.cards) {
+    enemyCardsElem.innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
+  }
+
+  // 3. アクションエリア・メッセージ・ボタン制御
+  const actionArea = document.getElementById("action-area");
+  const waitMsg = document.getElementById("wait-msg");
   const commandInputs = document.getElementById("command-inputs");
-  const waitMsg = document.getElementById("wait-msg") || document.getElementById("game-msg");
+
+  if (actionArea) actionArea.style.display = "block";
 
   if (gameState.phase === "card_reveal") {
     if (commandInputs) commandInputs.style.display = "none";
