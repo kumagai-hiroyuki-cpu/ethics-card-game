@@ -633,6 +633,12 @@ function updateGameUI() {
   }
 }
 
+  // 4. ログの更新
+  if (typeof updateLogsUI === "function") {
+    updateLogsUI();
+  }
+}
+
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
