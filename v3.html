@@ -566,12 +566,11 @@ const initialGameState = {
   logs: ["部屋が作成されました。P2の参加を待っています..."],
   revealedCount: 0
 };
-// === ルーム作成 / 参加処理 ===
+// === ルーム作成 / 参加処理 (対人戦) ===
 function joinRoom(role) {
   const inputElem = document.getElementById("room-id-input");
   let inputRoomId = inputElem ? inputElem.value.trim() : "";
 
-  // P1でID未入力の場合はデフォルト値 "100" を使用
   if (!inputRoomId) {
     if (role === 'p1') {
       inputRoomId = "100";
@@ -583,10 +582,10 @@ function joinRoom(role) {
   }
 
   roomId = inputRoomId;
-  myRole = role; // 'p1' または 'p2'
+  myRole = role;
   isCpuMode = false;
 
-  if (!db) {
+  if (typeof db === "undefined" || !db) {
     alert("Firebaseに接続されていません。");
     return;
   }
@@ -594,7 +593,6 @@ function joinRoom(role) {
   const roomRef = db.ref("rooms/" + roomId);
 
   if (role === 'p1') {
-    // P1が部屋を作成する場合
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     const p1Cards = shuffled.slice(0, 3).map(c => ({
       ...c,
@@ -629,18 +627,18 @@ function joinRoom(role) {
 
     roomRef.set(sanitizeObject(newGameState), function(error) {
       if (error) {
-        console.error("部屋作成エラー:", error);
         alert("部屋の作成に失敗しました。");
       } else {
         listenToRoom(roomId);
-        document.getElementById("setup-area").style.display = "none";
-        document.getElementById("game-area").style.display = "block";
+        const setupArea = document.getElementById("setup-area");
+        const gameArea = document.getElementById("game-area");
+        if (setupArea) setupArea.style.display = "none";
+        if (gameArea) gameArea.style.display = "block";
         updateGameUI();
       }
     });
 
   } else if (role === 'p2') {
-    // P2が部屋に入ろうとする場合
     roomRef.once("value", function(snapshot) {
       const data = snapshot.val();
       if (data) {
@@ -652,8 +650,10 @@ function joinRoom(role) {
         roomRef.update(sanitizeObject(data), function(error) {
           if (!error) {
             listenToRoom(roomId);
-            document.getElementById("setup-area").style.display = "none";
-            document.getElementById("game-area").style.display = "block";
+            const setupArea = document.getElementById("setup-area");
+            const gameArea = document.getElementById("game-area");
+            if (setupArea) setupArea.style.display = "none";
+            if (gameArea) gameArea.style.display = "block";
             updateGameUI();
           }
         });
@@ -663,8 +663,6 @@ function joinRoom(role) {
     });
   }
 }
-
-
 
 // === UI更新処理 ===
 function updateGameUI() {
