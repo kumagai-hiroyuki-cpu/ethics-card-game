@@ -719,16 +719,16 @@ function triggerBattleStartPassives() {
 }
 
 function renderCard(c, isEnemy) {
-  // まだめくられていない（裏面）場合
-  if (!c.isFlipped) {
+  // ① まだめくられていない（裏面）場合
+  if (!c || !c.isFlipped) {
     return `
-      <div class="card card-back" style="background: #333; border: 2px solid #555; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
-        <div style="font-size: 32px; color: #888;">❓</div>
+      <div class="card-container card-back" style="min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a2a2a; border: 2px solid #555;">
+        <div style="font-size: 36px; color: #e74c3c; font-weight: bold;">❓</div>
       </div>
     `;
   }
 
-  // ▼ オープン済み（表面）の場合の表示
+  // ② オープン済み（表面）の場合
   const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
   const synergyClass = c.hasSynergy ? 'synergy-active' : '';
 
@@ -736,9 +736,11 @@ function renderCard(c, isEnemy) {
     <div class="card-container ${c.currentHP === 0 ? 'defeated' : ''} ${synergyClass}" onclick="openModal('${c.id}')">
       <img src="${c.image}" class="card-image" alt="${c.name}" onerror="this.src='https://via.placeholder.com/140x140?text=No+Image'">
       <div class="card-name">${c.name}</div>
-      <div class="hp-bar-container">
-        <div class="hp-bar" style="width: ${hpPercent}%;"></div>
-        <span class="hp-text">${c.currentHP ?? c.hp} / ${c.maxHp}</span>
+      <div class="hp-bar-container" style="padding: 4px;">
+        <div class="hp-bar">
+          <div class="hp-fill" style="width: ${hpPercent}%;"></div>
+          <span class="hp-text">${c.currentHP ?? c.hp} / ${c.maxHp}</span>
+        </div>
       </div>
     </div>
   `;
