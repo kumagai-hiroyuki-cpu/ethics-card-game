@@ -566,21 +566,35 @@ const initialGameState = {
   logs: ["部屋が作成されました。P2の参加を待っています..."],
   revealedCount: 0
 };
-// === ルーム参加 / Firebase初期化 ===
-// === ルーム作成 / 参加処理 ===
-// === ルーム作成 / 参加処理 ===
 // === ルーム作成 / 参加処理 ===
 function joinRoom(role) {
-  const inputRoomId = document.getElementById("room-id-input")?.value?.trim() || "100";
+  const inputElem = document.getElementById("room-id-input");
+  let inputRoomId = inputElem ? inputElem.value.trim() : "";
+
+  // P1でID未入力の場合はデフォルト値 "100" を使用
+  if (!inputRoomId) {
+    if (role === 'p1') {
+      inputRoomId = "100";
+      if (inputElem) inputElem.value = "100";
+    } else {
+      alert("部屋IDを入力してください（例: 333）");
+      return;
+    }
+  }
+
   roomId = inputRoomId;
   myRole = role; // 'p1' または 'p2'
   isCpuMode = false;
 
-  const roomRef = db ? db.ref("rooms/" + roomId) : null;
-  if (!roomRef) return;
+  if (!db) {
+    alert("Firebaseに接続されていません。");
+    return;
+  }
+
+  const roomRef = db.ref("rooms/" + roomId);
 
   if (role === 'p1') {
-    // P1が部屋を作成する場合：カードをランダム選出
+    // P1が部屋を作成する場合
     const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
     const p1Cards = shuffled.slice(0, 3).map(c => ({
       ...c,
@@ -604,7 +618,6 @@ function joinRoom(role) {
     applyTeamSynergy(p1Cards, "P1");
     applyTeamSynergy(p2Cards, "P2");
 
-    // ★ 初期フェーズを "waiting_p2" にしてP2の参加を待ちます
     const newGameState = {
       phase: "waiting_p2",
       turnCount: 1,
@@ -614,37 +627,43 @@ function joinRoom(role) {
       logs: ["部屋を作成しました (部屋ID: " + roomId + ")。P2の参加を待っています..."]
     };
 
-    roomRef.set(sanitizeObject(newGameState));
-    listenToRoom(roomId);
-
-    document.getElementById("setup-area").style.display = "none";
-    document.getElementById("game-area").style.display = "block";
-    updateGameUI();
-
-  } else if (role === 'p2') {
-    // P2が部屋に入る場合
-    listenToRoom(roomId);
-    
-    roomRef.once("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        // ★ P2が入ったのでフェーズを "card_reveal" に進めます
-        data.phase = "card_reveal";
-        data.p2.name = "P2(あなた)";
-        if (data.p1) data.p1.name = "P1(相手)";
-        data.logs = [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"];
-        
-        roomRef.update(sanitizeObject(data));
-
+    roomRef.set(sanitizeObject(newGameState), function(error) {
+      if (error) {
+        console.error("部屋作成エラー:", error);
+        alert("部屋の作成に失敗しました。");
+      } else {
+        listenToRoom(roomId);
         document.getElementById("setup-area").style.display = "none";
         document.getElementById("game-area").style.display = "block";
         updateGameUI();
+      }
+    });
+
+  } else if (role === 'p2') {
+    // P2が部屋に入ろうとする場合
+    roomRef.once("value", function(snapshot) {
+      const data = snapshot.val();
+      if (data) {
+        data.phase = "card_reveal";
+        if (data.p2) data.p2.name = "P2(あなた)";
+        if (data.p1) data.p1.name = "P1(相手)";
+        data.logs = [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"];
+
+        roomRef.update(sanitizeObject(data), function(error) {
+          if (!error) {
+            listenToRoom(roomId);
+            document.getElementById("setup-area").style.display = "none";
+            document.getElementById("game-area").style.display = "block";
+            updateGameUI();
+          }
+        });
       } else {
         alert("部屋ID 「" + roomId + "」 が存在しません。先にP1で部屋を作成してください。");
       }
     });
   }
 }
+
 
 
 // === UI更新処理 ===
