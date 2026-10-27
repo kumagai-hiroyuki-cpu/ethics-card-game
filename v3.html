@@ -943,9 +943,10 @@ function processBattlePhase() {
   updateGameUI();
 }
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
-  if (!target || target.hp <= 0) return;
+  const currentHpVal = target.currentHP ?? target.hp ?? 0;
+  if (!target || currentHpVal <= 0) return;
 
-  // ① 最初に mult を定義・計算する
+  // ① 属性倍率の計算
   const mult = getAttributeMultiplier(attacker.type, target.type);
   let finalDamage = Math.floor(baseDmg * mult);
 
@@ -975,26 +976,16 @@ function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, is
     }
   }
 
-  // ③ mult を使ったログ用テキスト生成
+  // ③ ダメージ適用とプロパティ同期
   let effText = mult > 1.0 ? " (弱点突いた！)" : "";
-  
- // currentHP または hp から現在の値を取得
-const currentHpVal = target.currentHP ?? target.hp ?? 0;
-const newHp = Math.max(0, currentHpVal - finalDamage);
+  const newHp = Math.max(0, currentHpVal - finalDamage);
+  target.currentHP = newHp;
+  target.hp = newHp;
 
-// 両方のプロパティに最新のHPをセット（これでUIが確実に更新されます）
-target.currentHP = newHp;
-target.hp = newHp;
+  addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
 
-addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
-
-// ④ 死亡時パッシブの処理
-if (newHp === 0) {
-  addLogMessage("💀 " + target.name + " は倒れた！");
-  if (typeof triggerPassive === "function") {
-    triggerPassive("onDeath", target, targetObj, actorObj);
-  }
-}
+  // ④ 死亡時パッシブの処理
+  if (newHp === 0) {
     addLogMessage("💀 " + target.name + " は倒れた！");
     if (typeof triggerPassive === "function") {
       triggerPassive("onDeath", target, targetObj, actorObj);
