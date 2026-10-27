@@ -341,7 +341,6 @@ function executeSpecialSkill(attacker, targetParty, skillData) {
     console.log(`ダイスの目は${dice}！`);
   }
 }
-
 // ==========================================
 // 6. UIテスト用連携コード
 // ==========================================
@@ -630,17 +629,9 @@ function sanitizeObject(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
 }
 
-// undefinedなプロパティを完全に除去する安全化関数
-function sanitizeObject(obj) {
-  return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
-}
-
 // Firebaseのデータ監視関数（部屋の同期処理）
-// 1. 部屋の通信・同期を担当する関数
 function listenToRoom(id) {
-  // CPUモードの場合、または roomRef が取得できない場合は Firebase の同期処理を行わない
   if (isCpuMode) return;
-
   const roomRef = db ? db.ref("rooms/" + id) : null;
   if (!roomRef) return;
 
@@ -651,115 +642,6 @@ function listenToRoom(id) {
       updateGameUI();
     }
   });
-}
-
-// undefinedなプロパティを完全除去する関数
-function sanitizeObject(obj) {
-  return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
-}
-const initialGameState = {
-  phase: "waiting_p2",
-  turn: 1,
-  p1: { name: "P1", cards: [], cmd: null },
-  p2: { name: "P2", cards: [], cmd: null },
-  logs: ["部屋が作成されました。P2の参加を待っています..."],
-  revealedCount: 0
-};
-// === ルーム作成 / 参加処理 (対人戦) ===
-function joinRoom(role) {
-  const inputElem = document.getElementById("room-id-input");
-  let inputRoomId = inputElem ? inputElem.value.trim() : "";
-
-  if (!inputRoomId) {
-    if (role === 'p1') {
-      inputRoomId = "100";
-      if (inputElem) inputElem.value = "100";
-    } else {
-      alert("部屋IDを入力してください（例: 333）");
-      return;
-    }
-  }
-
-  roomId = inputRoomId;
-  myRole = role;
-  isCpuMode = false;
-
-  if (typeof db === "undefined" || !db) {
-    alert("Firebaseに接続されていません。");
-    return;
-  }
-
-  const roomRef = db.ref("rooms/" + roomId);
-
-  if (role === 'p1') {
-    const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
-    const p1Cards = shuffled.slice(0, 3).map(c => ({
-      ...c,
-      hp: c.hp ?? c.maxHp ?? 100,
-      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-      maxHp: c.maxHp ?? 100,
-      atk: c.atk ?? 20,
-      skillUsed: false,
-      isFlipped: false
-    }));
-    const p2Cards = shuffled.slice(3, 6).map(c => ({
-      ...c,
-      hp: c.hp ?? c.maxHp ?? 100,
-      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-      maxHp: c.maxHp ?? 100,
-      atk: c.atk ?? 20,
-      skillUsed: false,
-      isFlipped: false
-    }));
-
-    applyTeamSynergy(p1Cards, "P1");
-    applyTeamSynergy(p2Cards, "P2");
-
-    const newGameState = {
-      phase: "waiting_p2",
-      turnCount: 1,
-      p1: { name: "P1(あなた)", cards: p1Cards, cmd: null },
-      p2: { name: "P2(待機中)", cards: p2Cards, cmd: null },
-      revealedCount: 0,
-      logs: ["部屋を作成しました (部屋ID: " + roomId + ")。P2の参加を待っています..."]
-    };
-
-    roomRef.set(sanitizeObject(newGameState), function(error) {
-      if (error) {
-        alert("部屋の作成に失敗しました。");
-      } else {
-        listenToRoom(roomId);
-        const setupArea = document.getElementById("setup-area");
-        const gameArea = document.getElementById("game-area");
-        if (setupArea) setupArea.style.display = "none";
-        if (gameArea) gameArea.style.display = "block";
-        updateGameUI();
-      }
-    });
-  } else if (role === 'p2') {
-    roomRef.once("value", function(snapshot) {
-      const data = snapshot.val();
-      if (data) {
-        data.phase = "card_reveal";
-        if (data.p2) data.p2.name = "P2(あなた)";
-        if (data.p1) data.p1.name = "P1(相手)";
-        data.logs = [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"];
-
-        roomRef.update(sanitizeObject(data), function(error) {
-          if (!error) {
-            listenToRoom(roomId);
-            const setupArea = document.getElementById("setup-area");
-            const gameArea = document.getElementById("game-area");
-            if (setupArea) setupArea.style.display = "none";
-            if (gameArea) gameArea.style.display = "block";
-            updateGameUI();
-          }
-        });
-      } else {
-        alert("部屋ID 「" + roomId + "」 が存在しません。先にP1で部屋を作成してください。");
-      }
-    });
-  }
 }
 
 // === UI更新処理 ===
@@ -795,7 +677,6 @@ function updateGameUI() {
   if (actionArea) actionArea.style.display = "block";
 
   if (gameState.phase === "waiting_p2") {
-    // P2参加待ち状態
     if (commandInputs) commandInputs.style.display = "none";
     if (waitMsg) {
       waitMsg.style.display = "block";
@@ -806,7 +687,6 @@ function updateGameUI() {
     if (waitMsg) {
       waitMsg.style.display = "block";
       
-      const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2;
       const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c.isFlipped).length : 0;
 
       if (myFlippedCount < 3) {
@@ -819,8 +699,6 @@ function updateGameUI() {
         waitMsg.innerText = "相手の準備完了を待っています...";
       }
     }
-  }
-
   } else if (gameState.phase === "command_select") {
     if (commandInputs) commandInputs.style.display = "block";
     if (waitMsg) waitMsg.style.display = "none";
@@ -830,8 +708,7 @@ function updateGameUI() {
     }
   }
 
-
-  // 4. ログ更新（存在しないupdateLogsUIではなく、renderLogsを呼ぶ）
+  // 4. ログ更新
   if (typeof renderLogs === "function") {
     renderLogs(currentLogs.length > 0 ? currentLogs : (gameState.logs || []));
   }
