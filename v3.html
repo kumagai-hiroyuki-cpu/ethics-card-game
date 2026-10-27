@@ -885,35 +885,42 @@ function processBattlePhase() {
   const p2Name = isCpuMode ? "CPU" : "P2";
 
   addLogMessage("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
-  
-  // ▼▼ 【ターン開始時パッシブ】ここで呼び出し ▼▼
+
+  // ターン開始時パッシブ
   [gameState.p1, gameState.p2].forEach(pObj => {
-    pObj.cards.forEach(card => {
-      if (card.hp > 0) {
-        triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
-      }
-    });
+    if (pObj && pObj.cards) {
+      pObj.cards.forEach(card => {
+        const hp = card.currentHP ?? card.hp ?? 0;
+        if (hp > 0 && typeof triggerPassive === "function") {
+          triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
+        }
+      });
+    }
   });
 
   applyAction(p1Name, gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
   applyAction(p2Name, gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
 
-// ▼▼ 【ターン終了時パッシブ】呼び出し ▼▼
+  // ターン終了時パッシブ
   [gameState.p1, gameState.p2].forEach(pObj => {
-    const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1;
-    pObj.cards.forEach(card => {
-  if (card.hp > 0) {
-        triggerPassive("onTurnEnd", card, pObj, enemyObj);
-      }
-    });
+    if (pObj && pObj.cards) {
+      const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1;
+      pObj.cards.forEach(card => {
+        const hp = card.currentHP ?? card.hp ?? 0;
+        if (hp > 0 && typeof triggerPassive === "function") {
+          triggerPassive("onTurnEnd", card, pObj, enemyObj);
+        }
+      });
+    }
   });
 
-  // ▼ コマンドをリセットしてUIを更新
+  // コマンドリセット
   gameState.p1.cmd = null;
   gameState.p2.cmd = null;
-// ▼ 勝敗チェック（全滅判定）
-  const p1Alive = gameState.p1.cards.some(c => c.hp > 0);
-  const p2Alive = gameState.p2.cards.some(c => c.hp > 0);
+
+  // 勝敗チェック（生存判定を currentHP ?? hp に統一）
+  const p1Alive = gameState.p1.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
+  const p2Alive = gameState.p2.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
 
   if (!p1Alive || !p2Alive) {
     gameState.phase = "finished";
@@ -921,23 +928,18 @@ function processBattlePhase() {
     if (!p1Alive && !p2Alive) {
       addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
     } else if (!p2Alive) {
-      // P1が勝利した場合のログ表示切り替え
       const winMsg = isCpuMode ? "🎉 Victory！ あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
       addLogMessage(winMsg);
     } else {
-      // P2が勝利した場合のログ表示切り替え
       const loseMsg = isCpuMode ? "💀 Defeat... CPUの勝利です。" : "🎉 プレイヤー2 (P2) の勝利です！";
       addLogMessage(loseMsg);
     }
-    
-    // コマンド入力をリセットしてUI描画後、処理を終了
-    gameState.p1.cmd = null;
-    gameState.p2.cmd = null;
-    updateGameUI();
-    return; // ターンを進めずにここで終了
-  }
-  gameState.turnCount++;
 
+    updateGameUI();
+    return; // ターンを進めずに終了
+  }
+
+  gameState.turnCount++;
   updateGameUI();
 }
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
