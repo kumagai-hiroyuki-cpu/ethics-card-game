@@ -548,7 +548,6 @@ function joinRoom(role) {
         updateGameUI();
       }
     });
-
   } else if (role === 'p2') {
     roomRef.once("value", function(snapshot) {
       const data = snapshot.val();
