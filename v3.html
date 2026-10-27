@@ -1026,18 +1026,26 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
   if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
 
   const attacker = actorObj.cards[cmd.attacker];
-  if (attacker.hp <= 0) return;
-　if (attacker.isStunned) {
-      addLogMessage(`💤 [${pName}] ${attacker.name} は罪を悔い改めており、行動できない！`);
-      attacker.isStunned = false; // 1回休んだら解除
-      return;
-    }
+  const attackerHp = attacker.currentHP ?? attacker.hp ?? 0;
+  
+  // 攻撃者がすでに倒れている場合は行動スキップ
+  if (attackerHp <= 0) return;
+
+  if (attacker.isStunned) {
+    addLogMessage(`💤 [${pName}] ${attacker.name} は罪を悔い改めており、行動できない！`);
+    attacker.isStunned = false; // 1回休んだら解除
+    return;
+  }
+
+  // 生存しているターゲットを取得
   const tgtIdx = getRandomTarget(targetObj.cards);
   const target = tgtIdx !== null ? targetObj.cards[tgtIdx] : null;
 
   if (cmd.type === 'attack') {
-    if (target && target.hp > 0) {
+    if (target) {
       executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
+    } else {
+      addLogMessage("⚠️ [" + pName + "] 攻撃対象が存在しません。");
     }
   } else {
     const activePt = attacker.activeVal || 0;
@@ -1057,7 +1065,8 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
     let isCanceledByFestinger = false;
     if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
       const oppAttacker = targetObj.cards[oppCmd.attacker];
-      if (oppAttacker.id === 'festinger' && oppAttacker.hp > 0) {
+      const oppHp = oppAttacker.currentHP ?? oppAttacker.hp ?? 0;
+      if (oppAttacker.id === 'festinger' && oppHp > 0) {
         const festingerRate = Math.min(100, Math.floor(((oppAttacker.activeVal || 0) / 50) * 100));
         if (Math.floor(Math.random() * 100) < festingerRate) {
           isCanceledByFestinger = true;
@@ -1072,8 +1081,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
 
     addLogMessage("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」発動！ (発動率:" + activeRate + "%)");
 
-    // attacker.skillType ("special", "damage", "heal" 等) を優先して取得する
-　　const sType = attacker.skillType || attacker.type || "special";
+    const sType = attacker.skillType || attacker.type || "special";
 
     switch (sType) {
       case "damage":
@@ -1088,7 +1096,7 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
           const diceMax = Math.max(1, Math.floor(activePt / 5));
           const diceRoll = Math.floor(Math.random() * diceMax) + 1;
           const reduced = Math.min(diceRoll, target.atk);
-          target.atk -= reduced;
+          target.atk = Math.max(0, target.atk - reduced);
           addLogMessage("🎲 [" + attacker.name + "] 1d" + diceMax + "ダイス ➔ 出た目:" + diceRoll + "！ " + target.name + " のATKを " + reduced + " 低下させた！(残ATK:" + target.atk + ")");
         }
         break;
@@ -1096,7 +1104,12 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
       case "heal":
         const healAmt = activePt;
         actorObj.cards.forEach(c => {
-          if (c.hp > 0) c.hp = Math.min(c.maxHp, c.hp + healAmt);
+          const cHp = c.currentHP ?? c.hp ?? 0;
+          if (cHp > 0) {
+            const newHp = Math.min(c.maxHp || 100, cHp + healAmt);
+            c.currentHP = newHp;
+            c.hp = newHp;
+          }
         });
         addLogMessage("✨ [" + attacker.name + "] の「" + attacker.skillName + "」！ 味方全員のHPが " + healAmt + " 回復！");
         break;
@@ -1104,7 +1117,8 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
       case "buff":
         const buffAmt = Math.max(1, Math.floor(activePt / 5));
         actorObj.cards.forEach(c => {
-          if (c.hp > 0) c.atk += buffAmt;
+          const cHp = c.currentHP ?? c.hp ?? 0;
+          if (cHp > 0) c.atk += buffAmt;
         });
         addLogMessage("🔥 [" + attacker.name + "] の「" + attacker.skillName + "」！ 味方全員のATKが +" + buffAmt + " 上昇！");
         break;
