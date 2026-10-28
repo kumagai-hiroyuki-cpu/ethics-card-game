@@ -1204,13 +1204,12 @@ function openModal(cardId) {
   const tags = card.synergyTags ? card.synergyTags.join(" / ") : "なし";
   document.getElementById("modal-tags").innerText = tags;
 
-  document.getElementById("card-modal").style.display = "flex";
-}
+document.getElementById("card-modal").style.display = "flex";
+  }
 
-function closeModal() {
-  document.getElementById("card-modal").style.display = "none";
-}  
-
+  function closeModal() {
+    document.getElementById("card-modal").style.display = "none";
+  }
 </script>
 </body>
 </html>
