@@ -726,7 +726,28 @@ function listenToRoom(id) {
           }
         }
       }
+if (!p1Alive || !p2Alive) {
+    gameState.phase = "finished";
 
+    if (!p1Alive && !p2Alive) {
+      addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+    } else if (!p2Alive) {
+      const winMsg = isCpuMode ? "🎉 Victory！ あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
+      addLogMessage(winMsg);
+    } else {
+      const loseMsg = isCpuMode ? "💀 Defeat... CPUの勝利です。" : "🎉 プレイヤー2 (P2) の勝利です！";
+      addLogMessage(loseMsg);
+    }
+
+    // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+    const commandInputs = document.getElementById("command-inputs");
+    const resetArea = document.getElementById("reset-area");
+    if (commandInputs) commandInputs.style.display = "none";
+    if (resetArea) resetArea.style.display = "block";
+
+    updateGameUI();
+    return;
+  }
       // 受信した最新の gameState をもとにUIとログを更新
       updateGameUI();
     }
