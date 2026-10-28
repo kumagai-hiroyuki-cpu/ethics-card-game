@@ -640,21 +640,23 @@ function listenToRoom(id) {
     if (data) {
       gameState = data;
       
-      // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決して更新
+      // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
       if (!isCpuMode && gameState.phase === "command_select") {
         if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
           if (myRole === "p1") {
             processBattlePhase();
-            // 計算後の最新状態をFirebaseへ保存
+            // 計算後の最新状態（ログ含む）をFirebaseへ保存
             db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
           }
         }
       }
 
+      // 受信した最新の gameState をもとにUIとログを更新
       updateGameUI();
     }
   });
 }
+
 
 // === UI更新処理 ===
 function updateGameUI() {
