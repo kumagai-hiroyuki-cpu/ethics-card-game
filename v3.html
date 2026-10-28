@@ -1197,19 +1197,20 @@ function openModal(cardId) {
   document.getElementById("modal-skill-name").innerText = card.skillName || "-";
   document.getElementById("modal-skill-desc").innerText = card.skillDesc || "-";
 
-  document.getElementById("modal-passive-val").innerText = card.passiveVal || 0;
+　document.getElementById("modal-passive-val").innerText = card.passiveVal || 0;
   document.getElementById("modal-passive-name").innerText = card.passiveName || "-";
   document.getElementById("modal-passive-desc").innerText = card.passiveDesc || "-";
 
-  const tags = card.synergyTags ? card.synergyTags.join(" / ") : "なし";
-  document.getElementById("modal-tags").innerText = tags;
+    const tags = card.synergyTags ? card.synergyTags.join(" / ") : "なし";
+    document.getElementById("modal-tags").innerText = tags;
 
-document.getElementById("card-modal").style.display = "flex";
+    document.getElementById("card-modal").style.display = "flex";
   }
+}
 
-  function closeModal() {
-    document.getElementById("card-modal").style.display = "none";
-  }
+function closeModal() {
+  document.getElementById("card-modal").style.display = "none";
+}
 </script>
 </body>
 </html>
