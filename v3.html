@@ -1224,21 +1224,42 @@ function applySynergyBuff(cards) {
   if (!cards || !Array.isArray(cards)) return;
 
   const tagCounts = {};
+  const tagToCards = {};
 
-  // 1. チーム内の全カードから有効なタグを集計（「男性」は除外）
+  // 1. チーム内の全カードから有効なタグを集計（「男性」および空タグは除外）
   cards.forEach(card => {
     if (!card.synergyTags) return;
-    const tags = card.synergyTags.split(',').map(t => t.trim());
+    
+    // 文字列(カンマ区切り)と配列の両方のフォーマットに対応
+    const tags = Array.isArray(card.synergyTags) 
+      ? card.synergyTags 
+      : card.synergyTags.split(',').map(t => t.trim());
+
     tags.forEach(tag => {
-      if (tag === "男性" || tag === "") return;
+      if (tag === "男性" || !tag) return;
+      
       tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      if (!tagToCards[tag]) tagToCards[tag] = [];
+      tagToCards[tag].push(card.name);
     });
   });
 
-  // 2. 2枚以上重複しているタグを持つカードのHPを1.2倍に補正
+  // 2. 2枚以上一致したシナジータグごとに「絆効果『〇〇』発動」をログ出力
+  Object.keys(tagCounts).forEach(tag => {
+    if (tagCounts[tag] >= 2) {
+      const memberNames = tagToCards[tag].join(" × ");
+      addLogMessage(`🤝 絆効果「${tag}」発動！ (${memberNames}) チームのHPが1.2倍に強化！`);
+    }
+  });
+
+  // 3. 対象カードのHPを1.2倍に補正
   cards.forEach(card => {
     if (!card.synergyTags) return;
-    const tags = card.synergyTags.split(',').map(t => t.trim());
+    
+    const tags = Array.isArray(card.synergyTags) 
+      ? card.synergyTags 
+      : card.synergyTags.split(',').map(t => t.trim());
+
     const hasSynergy = tags.some(tag => tag !== "男性" && tagCounts[tag] >= 2);
 
     if (hasSynergy && !card._synergyApplied) {
@@ -1249,8 +1270,6 @@ function applySynergyBuff(cards) {
       card.hp = boostedHp;
       card.currentHP = boostedHp;
       card._synergyApplied = true;
-
-      console.log(`【絆シナジー発動】${card.name}: HPが1.2倍(${boostedHp})に補正されました`);
     }
   });
 }
