@@ -643,9 +643,6 @@ function revealNextCard() {
   }
 }
 
-
-
-
 // undefinedなプロパティを完全に除去する安全化関数
 function sanitizeObject(obj) {
   return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
@@ -744,21 +741,27 @@ function updateGameUI() {
     }
   }
 
- // --- 戦闘ログの同期描画処理 ---
-  const logContainer = document.getElementById("logContainer") || document.getElementById("battleLog");
-  if (logContainer && gameState.logs) {
-    // ログエリアをリセットして最新の全ログを描画
-    logContainer.innerHTML = "";
-    gameState.logs.forEach(msg => {
+// 4. ログ更新処理
+  const logElem = document.getElementById("logContainer") || 
+                  document.getElementById("battleLog") || 
+                  document.getElementById("log") || 
+                  document.getElementById("logs");
+
+  if (logElem) {
+    // gameState.logs または window.currentLogs から最新ログを取得
+    const logsToRender = (gameState && gameState.logs && gameState.logs.length > 0) 
+                          ? gameState.logs 
+                          : (window.currentLogs || []);
+
+    logElem.innerHTML = "";
+    logsToRender.forEach(msg => {
       const p = document.createElement("p");
       p.textContent = msg;
-      logContainer.appendChild(p);
+      p.style.margin = "2px 0";
+      logElem.appendChild(p);
     });
-    // 最新ログの位置へ自動スクロール
-    logContainer.scrollTop = logContainer.scrollHeight;
+    logElem.scrollTop = logElem.scrollHeight;
   }
-}
-
 
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
