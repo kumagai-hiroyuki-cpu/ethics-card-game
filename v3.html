@@ -445,7 +445,36 @@ function applyTeamSynergy(cards, teamName) {
     }
   });
 }
+// ゲーム状態をリセットして初期画面に戻す関数
+function resetGame() {
+  // 1. 変数とログの初期化
+  gameState = null;
+  currentLogs = [];
+  window.currentLogs = [];
+  isCpuMode = false;
+  myRole = "";
+  roomId = "";
 
+  // 2. Firebaseの監視を解除（オンライン対戦時）
+  if (db && roomId) {
+    db.ref("rooms/" + roomId).off();
+  }
+
+  // 3. 画面の表示・非表示を初期状態に切り替え
+  const setupArea = document.getElementById("setup-area");
+  const gameArea = document.getElementById("game-area");
+  const actionArea = document.getElementById("action-area");
+  const logElem = document.getElementById("log");
+
+  if (setupArea) setupArea.style.display = "block";
+  if (gameArea) gameArea.style.display = "none";
+  if (actionArea) actionArea.style.display = "none";
+  if (logElem) logElem.innerHTML = "";
+
+  // 4. 入力フォームのリセット
+  const roomInput = document.getElementById("room-id-input");
+  if (roomInput) roomInput.value = "";
+}
 // === CPU対戦開始 ===
 function startCpuBattle() {
   isCpuMode = true;
