@@ -416,12 +416,6 @@ function addLogMessage(msg) {
   }
 }
 
-function renderLogs(logs) {
-  const l = document.getElementById("log");
-  if (!l || !logs) return;
-  l.innerHTML = logs.map(msg => "<div>・" + msg + "</div>").join("");
-}
-
 function applyTeamSynergy(cards, teamName) {
   const tagCounts = {};
   cards.forEach(c => {
