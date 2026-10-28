@@ -752,10 +752,9 @@ function updateGameUI() {
       div.style.margin = "2px 0";
       logElem.appendChild(div);
     });
-    logElem.scrollTop = logElem.scrollHeight;
+   logElem.scrollTop = logElem.scrollHeight;
   }
-｝
-
+}
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
   if (!gameState) return;
