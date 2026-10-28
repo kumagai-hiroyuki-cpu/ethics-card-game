@@ -789,7 +789,7 @@ function renderCard(c, isEnemy) {
   // まだめくられていない (裏面) の場合
   if (!c || !c.isFlipped) {
     return `
-      <div class="card-container card-back" style="min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a2a2a; border: 2px solid #555;">
+      <div class="card-container card-back" style="min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a2a2a; border: 2px solid #555; border-radius: 6px; padding: 6px; box-sizing: border-box;">
         <div style="font-size: 36px; color: #e74c3c; font-weight: bold;">?</div>
       </div>
     `;
@@ -806,13 +806,19 @@ function renderCard(c, isEnemy) {
   }
 
   return `
-    <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')">
-      <div style="font-weight: bold; font-size: 0.9em; text-align: center; margin-bottom: 4px;">${c.name}</div>
-      ${rawImg ? `<img src="${rawImg}" alt="${c.name}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;" onerror="this.style.display='none'">` : ''}
-      <div style="background: #444; height: 10px; border-radius: 5px; margin: 4px 0; overflow: hidden;">
-        <div style="background: #2ecc71; width: ${hpPercent}%; height: 100%;"></div>
+    <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')" style="box-sizing: border-box; padding: 6px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 100%;">
+      <div style="font-weight: bold; font-size: 0.85em; text-align: center; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${c.name}</div>
+      
+      ${rawImg ? `<div style="width: 100%; height: 75px; overflow: hidden; border-radius: 4px; display: flex; justify-content: center; align-items: center; background: #1a1a1a;">
+                    <img src="${rawImg}" alt="${c.name}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.style.display='none'">
+                  </div>` : ''}
+      
+      <div style="width: 100%; margin-top: 4px;">
+        <div style="background: #444; height: 8px; border-radius: 4px; overflow: hidden;">
+          <div style="background: #2ecc71; width: ${hpPercent}%; height: 100%;"></div>
+        </div>
+        <div style="font-size: 0.75em; text-align: center; margin-top: 2px;">HP: ${c.currentHP ?? c.hp}/${c.maxHp ?? 100}</div>
       </div>
-      <div style="font-size: 0.8em; text-align: center;">HP: ${c.currentHP ?? c.hp}/${c.maxHp ?? 100}</div>
     </div>
   `;
 }
