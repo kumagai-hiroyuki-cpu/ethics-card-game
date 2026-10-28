@@ -51,7 +51,7 @@ const specialPassiveLogic = {
           c.hp = c.currentHP;
         }
       });
-      enemyObj.cards.forEach(c => {
+     enemyObj.cards.forEach(c => {
         const cHp = c.currentHP ?? c.hp ?? 0;
         if (cHp > 0) {
           c.currentHP = Math.max(0, cHp - 5);
@@ -61,7 +61,7 @@ const specialPassiveLogic = {
     }
   },
 
-  // ５. アリストテレス: HPが中間(30%~70%)の時、被ダメージ半減
+  // 5. アリストテレス: HPが中間(30%〜70%)の時、被ダメージ半減
   "aristotle": {
     onTakeDamage: (card, attacker, damage) => {
       const currentHp = card.currentHP ?? card.hp ?? 0;
@@ -69,7 +69,6 @@ const specialPassiveLogic = {
       const ratio = currentHp / maxHp;
       if (ratio >= 0.3 && ratio <= 0.7) {
         const reduced = Math.floor(damage / 2);
-        addLogMessage(`⚖️ [アリストテレス] 「中庸の精神」！(HPが中間状態のため被ダメージ半減: ${reduced})`);
         return reduced;
       }
       return damage;
