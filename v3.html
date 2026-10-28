@@ -676,46 +676,6 @@ function listenToRoom(id) {
     }
   });
 }
-function applySynergyBuff(team) {
-  if (!team || !team.cards) return;
-
-  // 1. チーム内の全カードから有効なタグを集計（「男性」は除外）
-  const tagCounts = {};
-  
-  team.cards.forEach(card => {
-    if (!card.synergyTags) return;
-    // カンマ区切りのタグを配列化してトリム
-    const tags = card.synergyTags.split(',').map(t => t.trim());
-    
-    tags.forEach(tag => {
-      // 「男性」タグは絆効果の発動対象から除外
-      if (tag === "男性" || tag === "") return;
-      
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
-  });
-
-  // 2. 重複（2枚以上）している有効タグを持つカードのHPを1.2倍に補正
-  team.cards.forEach(card => {
-    if (!card.synergyTags) return;
-    const tags = card.synergyTags.split(',').map(t => t.trim());
-
-    // 対象タグ（カウント2以上かつ「男性」以外）を1つでも持っているか判定
-    const hasSynergy = tags.some(tag => tag !== "男性" && tagCounts[tag] >= 2);
-
-    if (hasSynergy && !card._synergyApplied) {
-      // HPを1.2倍（端数は四捨五入）
-      card.maxHp = Math.round((card.maxHp || 60) * 1.2);
-      card.hp = card.maxHp;
-      card.currentHP = card.maxHp;
-      
-      // 二重適用防止フラグ
-      card._synergyApplied = true;
-
-      console.log(`【絆シナジー発動】${card.name}: HPが1.2倍(${card.maxHp})になりました！`);
-    }
-  });
-}
 
 // === UI更新処理 ===
 function updateGameUI() {
@@ -1258,6 +1218,46 @@ function openModal(cardId) {
 
 function closeModal() {
   document.getElementById("card-modal").style.display = "none";
+}
+function applySynergyBuff(team) {
+  if (!team || !team.cards) return;
+
+  // 1. チーム内の全カードから有効なタグを集計（「男性」は除外）
+  const tagCounts = {};
+  
+  team.cards.forEach(card => {
+    if (!card.synergyTags) return;
+    // カンマ区切りのタグを配列化してトリム
+    const tags = card.synergyTags.split(',').map(t => t.trim());
+    
+    tags.forEach(tag => {
+      // 「男性」タグは絆効果の発動対象から除外
+      if (tag === "男性" || tag === "") return;
+      
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+  });
+
+  // 2. 重複（2枚以上）している有効タグを持つカードのHPを1.2倍に補正
+  team.cards.forEach(card => {
+    if (!card.synergyTags) return;
+    const tags = card.synergyTags.split(',').map(t => t.trim());
+
+    // 対象タグ（カウント2以上かつ「男性」以外）を1つでも持っているか判定
+    const hasSynergy = tags.some(tag => tag !== "男性" && tagCounts[tag] >= 2);
+
+    if (hasSynergy && !card._synergyApplied) {
+      // HPを1.2倍（端数は四捨五入）
+      card.maxHp = Math.round((card.maxHp || 60) * 1.2);
+      card.hp = card.maxHp;
+      card.currentHP = card.maxHp;
+      
+      // 二重適用防止フラグ
+      card._synergyApplied = true;
+
+      console.log(`【絆シナジー発動】${card.name}: HPが1.2倍(${card.maxHp})になりました！`);
+    }
+  });
 }
 </script>
 </body>
