@@ -476,8 +476,13 @@ function startCpuBattle() {
     isFlipped: false
   }));
 
-  applyTeamSynergy(p1Cards, "P1");
-  applyTeamSynergy(p2Cards, "P2");
+  // 絆シナジーを両チームに適用
+  applySynergyBuff(gameState.p1);
+  applySynergyBuff(gameState.p2);
+
+  // 画面を描画
+  updateGameUI();
+}
 
   gameState = {
     turnCount: 1,
