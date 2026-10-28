@@ -722,11 +722,21 @@ function updateGameUI() {
     }
   }
 
-  // 4. ログ更新
-  if (typeof renderLogs === "function") {
-    renderLogs(currentLogs.length > 0 ? currentLogs : (gameState.logs || []));
+ // --- 戦闘ログの同期描画処理 ---
+  const logContainer = document.getElementById("logContainer") || document.getElementById("battleLog");
+  if (logContainer && gameState.logs) {
+    // ログエリアをリセットして最新の全ログを描画
+    logContainer.innerHTML = "";
+    gameState.logs.forEach(msg => {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      logContainer.appendChild(p);
+    });
+    // 最新ログの位置へ自動スクロール
+    logContainer.scrollTop = logContainer.scrollHeight;
   }
 }
+
 
 // 戦闘開始時に1度だけ実行する関数の例
 function triggerBattleStartPassives() {
