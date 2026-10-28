@@ -551,8 +551,8 @@ function joinRoom(role) {
       isFlipped: false
     }));
 
-    applyTeamSynergy(p1Cards, "P1");
-    applyTeamSynergy(p2Cards, "P2");
+  applySynergyBuff(p1Cards);
+　applySynergyBuff(p2Cards);
 
     const newGameState = {
       phase: "waiting_p2",
