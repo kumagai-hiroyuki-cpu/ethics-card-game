@@ -477,8 +477,8 @@ function startCpuBattle() {
   }));
 
   // 絆シナジーを両チームに適用
-  applySynergyBuff(gameState.p1);
-  applySynergyBuff(gameState.p2);
+  applySynergyBuff(p1Cards);
+　applySynergyBuff(p2Cards);
 
   // 画面を描画
   updateGameUI();
@@ -551,8 +551,8 @@ function joinRoom(role) {
       isFlipped: false
     }));
 
-  applySynergyBuff(p1Cards);
-　applySynergyBuff(p2Cards);
+ applySynergyBuff(p1Cards);
+ applySynergyBuff(p2Cards);
 
     const newGameState = {
       phase: "waiting_p2",
