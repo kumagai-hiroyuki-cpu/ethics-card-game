@@ -95,7 +95,12 @@
   <div id="command-inputs">
     行動する思想家: <select id="attacker-select" onchange="updateSkillDisplay()"></select><br>
     <span style="font-size:0.8em; color:#bdc3c7;">※攻撃ターゲットは自動でランダムに選ばれます</span><br>
-
+<!-- アクションエリア内に再戦用ボタンを追加 -->
+<div id="reset-area" style="display: none; margin-top: 10px;">
+  <button class="cpu-btn" onclick="resetGame()" style="background-color: #e67e22;">
+    🔄 タイトル画面へ戻る（もう一度遊ぶ）
+  </button>
+</div>
     <!-- スキル内容表示エリア -->
     <div class="skill-box">
       <div class="skill-title">✨ アクティブ [Pt:<span id="active-val">0</span> / 発動率:<span id="active-rate">0</span>%]: <span id="skill-name">-</span> <span id="skill-used-status" style="color:#e74c3c;"></span></div>
