@@ -476,13 +476,9 @@ function startCpuBattle() {
     isFlipped: false
   }));
 
-  // 絆シナジーを両チームに適用
+// 絆シナジーを両チームに適用
   applySynergyBuff(p1Cards);
-　applySynergyBuff(p2Cards);
-
-  // 画面を描画
-  updateGameUI();
-}
+  applySynergyBuff(p2Cards);
 
   gameState = {
     turnCount: 1,
@@ -490,7 +486,7 @@ function startCpuBattle() {
     p2: { name: "CPU", cards: p2Cards, cmd: null },
     phase: "card_reveal",
     revealedCount: 0,
-    logs: ["⚔️ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
+    logs: ["⚔ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
 
   const setupArea = document.getElementById("setup-area");
@@ -502,7 +498,7 @@ function startCpuBattle() {
   if (typeof triggerBattleStartPassives === "function") {
     triggerBattleStartPassives();
   }
-}
+} 
 
 // === ルーム作成 / 参加処理 (対人戦) ===
 function joinRoom(role) {
