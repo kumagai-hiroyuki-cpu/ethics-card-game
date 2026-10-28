@@ -778,11 +778,6 @@ if (!isCpuMode && gameState && gameState.p1.cmd && gameState.p2.cmd && myRole ==
   processBattlePhase();
 }
 
-  if (!isCpuMode && gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
-    processBattlePhase();
-  }
-}
-
 function renderCard(c, isEnemy) {
   // ① まだめくられていない（裏面）場合
   if (!c || !c.isFlipped) {
