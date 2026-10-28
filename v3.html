@@ -1075,7 +1075,7 @@ function processBattlePhase() {
   const p1Alive = gameState.p1.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
   const p2Alive = gameState.p2.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
 
-  if (!p1Alive || !p2Alive) {
+    if (!p1Alive || !p2Alive) {
     gameState.phase = "finished";
 
     if (!p1Alive && !p2Alive) {
@@ -1088,9 +1088,16 @@ function processBattlePhase() {
       addLogMessage(loseMsg);
     }
 
+    // ★★★ ここに追記します！ ★★★
+    const commandInputs = document.getElementById("command-inputs");
+    const resetArea = document.getElementById("reset-area");
+    if (commandInputs) commandInputs.style.display = "none";
+    if (resetArea) resetArea.style.display = "block";
+
     updateGameUI();
     return; // ターンを進めずに終了
   }
+
 
   gameState.turnCount++;
   updateGameUI();
