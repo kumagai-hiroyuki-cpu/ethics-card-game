@@ -450,7 +450,7 @@ function applyTeamSynergy(cards, teamName) {
 function startCpuBattle() {
   isCpuMode = true;
   myRole = "p1";
-  currentLogs = [];
+  window.currentLogs = []; // ログをリセット
 
   const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
 
@@ -476,10 +476,7 @@ function startCpuBattle() {
     isFlipped: false
   }));
 
-// 絆シナジーを両チームに適用
-  applySynergyBuff(p1Cards);
-  applySynergyBuff(p2Cards);
-
+  // ① まず gameState を作成
   gameState = {
     turnCount: 1,
     p1: { name: "あなた", cards: p1Cards, cmd: null },
@@ -488,6 +485,10 @@ function startCpuBattle() {
     revealedCount: 0,
     logs: ["⚔ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
+
+  // ② gameState 作成後にシナジーバフを適用（ログが gameState.logs に追記される）
+  applySynergyBuff(gameState.p1.cards);
+  applySynergyBuff(gameState.p2.cards);
 
   const setupArea = document.getElementById("setup-area");
   const gameArea = document.getElementById("game-area");
@@ -498,7 +499,8 @@ function startCpuBattle() {
   if (typeof triggerBattleStartPassives === "function") {
     triggerBattleStartPassives();
   }
-} 
+}
+
 
 // === ルーム作成 / 参加処理 (対人戦) ===
 function joinRoom(role) {
