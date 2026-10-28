@@ -390,22 +390,31 @@ let gameState = null;
 let currentLogs = [];
 let isCpuMode = false; // CPU対戦モードフラグ
 
+// 戦闘ログ追加関数
 function addLogMessage(msg) {
-  if (!gameState) return;
-  if (!gameState.logs) gameState.logs = [];
-  
-  gameState.logs.push(msg);
+  // gameStateがまだない場合は一時配列を作る
+  if (!window.currentLogs) window.currentLogs = [];
+  window.currentLogs.push(msg);
 
-  // ローカル表示用（CPUモード時等）
-  const logContainer = document.getElementById("logContainer") || document.getElementById("battleLog");
-  if (logContainer) {
+  if (typeof gameState !== "undefined" && gameState) {
+    if (!gameState.logs) gameState.logs = [];
+    gameState.logs.push(msg);
+  }
+
+  // 画面上のログエリアを直接更新
+  const logElem = document.getElementById("logContainer") || 
+                  document.getElementById("battleLog") || 
+                  document.getElementById("log") || 
+                  document.getElementById("logs");
+
+  if (logElem) {
     const p = document.createElement("p");
     p.textContent = msg;
-    logContainer.appendChild(p);
-    logContainer.scrollTop = logContainer.scrollHeight;
+    p.style.margin = "2px 0";
+    logElem.appendChild(p);
+    logElem.scrollTop = logElem.scrollHeight;
   }
 }
-
 
 function renderLogs(logs) {
   const l = document.getElementById("log");
