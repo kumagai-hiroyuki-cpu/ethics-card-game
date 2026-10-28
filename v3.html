@@ -549,9 +549,7 @@ function joinRoom(role) {
       isFlipped: false
     }));
 
- applySynergyBuff(p1Cards);
- applySynergyBuff(p2Cards);
-
+     // ① まず newGameState を作成する
     const newGameState = {
       phase: "waiting_p2",
       turnCount: 1,
@@ -560,6 +558,27 @@ function joinRoom(role) {
       revealedCount: 0,
       logs: ["部屋を作成しました (部屋ID: " + roomId + ")。P2の参加を待っています..."]
     };
+
+    // ② グローバル変数 gameState に代入する
+    gameState = newGameState;
+
+    // ③ 代入した後にシナジーバフを適用する（これでログに「絆効果発動」が残ります）
+    applySynergyBuff(gameState.p1.cards);
+    applySynergyBuff(gameState.p2.cards);
+
+    // ④ シナジーログが含まれた gameState を Firebase に保存する
+    roomRef.set(sanitizeObject(gameState), function(error) {
+      if (error) {
+        alert("部屋の作成に失敗しました。");
+      } else {
+        listenToRoom(roomId);
+        const setupArea = document.getElementById("setup-area");
+        const gameArea = document.getElementById("game-area");
+        if (setupArea) setupArea.style.display = "none";
+        if (gameArea) gameArea.style.display = "block";
+        updateGameUI();
+      }
+    });
 
     roomRef.set(sanitizeObject(newGameState), function(error) {
       if (error) {
