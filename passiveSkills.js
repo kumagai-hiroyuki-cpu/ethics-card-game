@@ -754,6 +754,7 @@ const specialPassiveLogic = {
         });
       }
     }
+   }
  };
 
 // === 2. メインのフック処理関数 (v3.html から呼び出される) ===
