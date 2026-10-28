@@ -391,8 +391,21 @@ let currentLogs = [];
 let isCpuMode = false; // CPU対戦モードフラグ
 
 function addLogMessage(msg) {
-  currentLogs.unshift(msg);
+  if (!gameState) return;
+  if (!gameState.logs) gameState.logs = [];
+  
+  gameState.logs.push(msg);
+
+  // ローカル表示用（CPUモード時等）
+  const logContainer = document.getElementById("logContainer") || document.getElementById("battleLog");
+  if (logContainer) {
+    const p = document.createElement("p");
+    p.textContent = msg;
+    logContainer.appendChild(p);
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
 }
+
 
 function renderLogs(logs) {
   const l = document.getElementById("log");
