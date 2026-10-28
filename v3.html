@@ -798,11 +798,17 @@ function renderCard(c, isEnemy) {
   // オープン済み (表面) の場合
   const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
   const isDefeated = (c.currentHP ?? c.hp) <= 0;
+  
+  // 画像パスの補完処理 (images/ フォルダを参照)
+  let rawImg = c.image || c.icon || c.img || '';
+  if (rawImg && !rawImg.startsWith('http') && !rawImg.startsWith('images/')) {
+    rawImg = `images/${rawImg}`;
+  }
 
   return `
     <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')">
       <div style="font-weight: bold; font-size: 0.9em; text-align: center; margin-bottom: 4px;">${c.name}</div>
-      <img src="${c.icon || ''}" alt="${c.name}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;" onerror="this.style.display='none'">
+      ${rawImg ? `<img src="${rawImg}" alt="${c.name}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px;" onerror="this.style.display='none'">` : ''}
       <div style="background: #444; height: 10px; border-radius: 5px; margin: 4px 0; overflow: hidden;">
         <div style="background: #2ecc71; width: ${hpPercent}%; height: 100%;"></div>
       </div>
