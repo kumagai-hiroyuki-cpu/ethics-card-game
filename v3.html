@@ -372,32 +372,6 @@
   </div>
 
   <script>
-    document.addEventListener('touchstart', function () {}, { passive: true });
-    document.addEventListener('touchmove', function (e) {
-      if (e.target && e.target.closest('button, select, .card-container, .modal-card')) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-
-    function bindTouchCompat() {
-      document.querySelectorAll('button, select, .card-container').forEach(el => {
-        if (el.dataset.touchBound === '1') return;
-        el.dataset.touchBound = '1';
-
-        el.addEventListener('touchstart', function (e) {
-          e.preventDefault();
-        }, { passive: false });
-
-        el.addEventListener('pointerdown', function (e) {
-          if (e.pointerType && e.pointerType !== 'mouse') {
-            e.preventDefault();
-          }
-        }, { passive: false });
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', bindTouchCompat);
-
     const firebaseConfig = {
       apiKey: "AIzaSyCFr2e2VVWPV8JIf9cIRUh94fLxGFpNR1w",
       authDomain: "ethics-card-game-4598a.firebaseapp.com",
@@ -844,7 +818,6 @@
           }
 
           updateGameUI();
-          bindTouchCompat();
         }
       });
     }
@@ -923,8 +896,6 @@
         });
         logElem.scrollTop = logElem.scrollHeight;
       }
-
-      bindTouchCompat();
     }
 
     function triggerBattleStartPassives() {
@@ -1171,8 +1142,6 @@
 
       modal.style.display = "flex";
     }
-
-    bindTouchCompat();
   </script>
 </body>
 </html>
