@@ -195,20 +195,19 @@ const specialPassiveLogic = {
     }
   },
 
-  // 14. 王陽明: EXタイプ（または特定の先生キャラ）が相手や味方にいる時にダメージ
+// 14. 王陽明: 朱子学派（またはEXタイプ等）のカードに追加ダメージ
   "wang_yangming": {
     onBattleStart: (card, pObj, enemyObj) => {
-      [...pObj.cards, ...enemyObj.cards].forEach(c => {
-        if (c.type === "EX" || c.rank === "EX") {
+      enemyObj.cards.forEach(c => {
+        if (c.rank === "EX") {
           const cHp = c.currentHP ?? c.hp ?? 0;
           c.currentHP = Math.max(0, cHp - 10);
           c.hp = c.currentHP;
-          addLogMessage(`🖊️ [王陽明] 「朱子学批判」！EXタイプの ${c.name} に 10 ダメージ！`);
+          addLogMessage(`📝 [王陽明] 「朱子学批判」！EXタイプの ${c.name} に 10 ダメージ！`); // 👈 末尾を ` に修正
         }
       });
     }
-  }
-},
+  },
   // 15. ジェームズ: 不確定な行動（発動率100%未満のスキル等）を選択時、確定（100%）で成功させる
   "james": {
     onTurnStart: (card) => {
