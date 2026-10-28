@@ -59,8 +59,7 @@ const specialPassiveLogic = {
         }
       });
     }
-  }
-},
+  },
 
   // ５. アリストテレス: HPが中間(30%~70%)の時、被ダメージ半減
   "aristotle": {
