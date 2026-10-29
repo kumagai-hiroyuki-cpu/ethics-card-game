@@ -883,7 +883,10 @@ function renderCard(c, isEnemy) {
   }
 
   return `
-    <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')" style="box-sizing: border-box; padding: 0; border-radius: 6px; overflow: hidden; position: relative; background: #fff; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 200px;">
+   <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')" style="box-sizing: border-box; padding: 0; border-radius: 6px; overflow: hidden; position: relative; background: #fff; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 200px;">
+      
+      <!-- カード画像 -->
+      ${rawImg ? `<img src="${rawImg}" alt="${c.name}" style="width: 100%; height: auto; display: block; object-fit: cover;" onerror="this.style.display='none'">` : ''}
       
       <!-- カード画像 (枠全体に大きく表示) -->
      ${rawImg ? `<img src="${rawImg}" alt="${c.name}" style="width: 100%; height: auto; display: block; object-fit: cover; cursor: zoom-in;" onclick="event.stopPropagation(); openCardModal(this.src);" onerror="this.style.display='none'">` : ''}
