@@ -28,7 +28,7 @@
     "skillType": "special",
     "skillName": "三段論法",
     "skillDesc": "敵に2つの「前提条件」を付与し、3撃目でその結論となる致死ダメージを与える。論理的に回避不能。",
-    "passiveVal": "#VALUE!",
+    "passiveVal": 10,
     "passiveType": "special",
     "passiveName": "中庸の精神",
     "passiveDesc": "自身のステータスが「高すぎず低すぎない」中間にあるとき、全属性耐性が大幅に上昇する。",
