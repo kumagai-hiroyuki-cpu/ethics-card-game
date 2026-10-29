@@ -1356,6 +1356,12 @@ function applySynergyBuff(cards) {
     }
   });
 }
-</script>
-</body>
+</script> 
+
+  <div id="card-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); text-align: center; cursor: pointer;" onclick="closeCardModal()">
+      <img id="enlarged-card-img" style="max-width: 95%; max-height: 90vh; margin-top: 5vh; border-radius: 10px;">
+      <p style="color: white; margin-top: 10px; font-weight: bold;">画面をタップして閉じる</p>
+  </div>
+  
+</body> 
 </html>
