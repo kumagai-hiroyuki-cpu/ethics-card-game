@@ -752,15 +752,16 @@ function listenToRoom(id) {
         }
     }
 
-    // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
-    const commandInputs = document.getElementById("command-inputs");
-    const resetArea = document.getElementById("reset-area");
-    if (commandInputs) commandInputs.style.display = "none";
-    if (resetArea) resetArea.style.display = "block";
+   // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+        const commandInputs = document.getElementById("command-inputs");
+        const resetArea = document.getElementById("reset-area");
+        if (commandInputs) commandInputs.style.display = "none";
+        if (resetArea) resetArea.style.display = "block";
 
-    updateGameUI();
-    return;
-  }
+        updateGameUI();
+        return;
+    }
+}
       // 受信した最新の gameState をもとにUIとログを更新
       updateGameUI();
     }
