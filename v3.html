@@ -728,11 +728,17 @@ function listenToRoom(id) {
     }
 }
 
-const p1Alive = gameState.p1Team && gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
-const p2Alive = gameState.p2Team && gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
+// 両チームのデータが揃っているか確認
+const hasP1Data = gameState.p1Team && gameState.p1Team.length > 0;
+const hasP2Data = gameState.p2Team && gameState.p2Team.length > 0;
 
-if (!p1Alive || !p2Alive) {
-    gameState.phase = "finished";
+if (hasP1Data && hasP2Data) {
+    const p1Alive = gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
+    const p2Alive = gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
+
+    // どちらかのチームが全滅した場合のみ終了フェーズへ
+    if (!p1Alive || !p2Alive) {
+        gameState.phase = "finished";
 
     if (!p1Alive && !p2Alive) {
       addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
