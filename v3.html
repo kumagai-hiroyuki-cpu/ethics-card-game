@@ -712,7 +712,7 @@ function listenToRoom(id) {
   const roomRef = db ? db.ref("rooms/" + id) : null;
   if (!roomRef) return;
 
-db.ref("rooms/" + roomId).on("value", (snapshot) => {
+  db.ref("rooms/" + id).on("value", (snapshot) => {
     const data = snapshot.val();
     if (data) {
         gameState = data;
@@ -723,7 +723,7 @@ db.ref("rooms/" + roomId).on("value", (snapshot) => {
                 if (myRole === "p1") {
                     processBattlePhase();
                     // 計算後の最新状態 (ログ含む) をFirebaseへ保存
-                    db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+                    db.ref("rooms/" + id).set(sanitizeObject(gameState));
                 }
             }
         }
@@ -742,7 +742,7 @@ db.ref("rooms/" + roomId).on("value", (snapshot) => {
 
                 if (!p1Alive && !p2Alive) {
                     addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
-                 else if (!p2Alive) {
+                } else if (!p2Alive) {
                     const winMsg = isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
                     addLogMessage(winMsg);
                 } else if (!p1Alive) {
@@ -764,8 +764,8 @@ db.ref("rooms/" + roomId).on("value", (snapshot) => {
         // 受信した最新の gameState をもとにUIとログを更新
         updateGameUI();
     }
-});
-
+  });
+}
 // === UI更新処理 ===
 function updateGameUI() {
   if (!gameState) return;
