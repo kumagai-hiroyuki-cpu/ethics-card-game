@@ -1411,11 +1411,11 @@ function openModal(cardId) {
   if (passiveDesc) passiveDesc.innerText = card.passiveDesc || "-";
 
   const tagsElem = document.getElementById("modal-tags");
-  if (tagsElem) {
-    const tags = Array.isArray(card.synergyTags) 
-      ? card.synergyTags.join(" / ") 
-      : (card.synergyTags || "なし");
-    tagsElem.innerText = tags;
+ if (tagsElem) {
+        const tags = Array.isArray(card.synergyTags)
+            ? card.synergyTags.join(" / ")
+            : (card.synergyTags || "なし");
+        tagsElem.innerText = tags;
     }
 
     const modalOverlay = document.getElementById("card-modal");
