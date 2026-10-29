@@ -756,13 +756,13 @@ function listenToRoom(id) {
                 if (commandInputs) commandInputs.style.display = "none";
                 if (resetArea) resetArea.style.display = "block";
 
-                updateGameUI();
-                return;
-            }
+               updateGameUI();
+            return;
         }
+    }
 
-        // 受信した最新の gameState をもとにUIとログを更新
-        updateGameUI();
+    // 受信した最新の gameState をもとにUIとログを更新
+    updateGameUI();
     }
 });
 
