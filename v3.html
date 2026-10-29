@@ -1103,7 +1103,7 @@ function processBattlePhase() {
 
   gameState.turnCount++;
   updateGameUI();
-}
+
 function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
   const currentHpVal = target.currentHP ?? target.hp ?? 0;
   if (!target || currentHpVal <= 0) return;
