@@ -1411,16 +1411,16 @@ function openModal(cardId) {
   if (passiveDesc) passiveDesc.innerText = card.passiveDesc || "-";
 
   const tagsElem = document.getElementById("modal-tags");
- if (tagsElem) {
-        const tags = Array.isArray(card.synergyTags)
-            ? card.synergyTags.join(" / ")
-            : (card.synergyTags || "なし");
-        tagsElem.innerText = tags;
-    }
+if (tagsElem) {
+    const tags = Array.isArray(card.synergyTags)
+        ? card.synergyTags.join(" / ")
+        : (card.synergyTags || "なし");
+    tagsElem.innerText = tags;
+} // ★ if (tagsElem) を閉じる }
 
-    const modalOverlay = document.getElementById("card-modal");
-    if (modalOverlay) modalOverlay.style.display = "flex";
-}
+const modalOverlay = document.getElementById("card-modal");
+if (modalOverlay) modalOverlay.style.display = "flex";
+} // ★ openModal() 関数自体を閉じる }
 
 function closeModal() {
     const modalOverlay = document.getElementById("card-modal");
