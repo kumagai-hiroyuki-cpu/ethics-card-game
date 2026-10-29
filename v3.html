@@ -828,6 +828,20 @@ function updateGameUI() {
     if (myPlayerData && myPlayerData.cards) {
       updateSelectOptions(myPlayerData.cards);
     }
+  } else if (gameState.phase === "finished") { // ← ★ここから追加
+    if (commandInputs) commandInputs.style.display = "none"; 
+    
+    const resetArea = document.getElementById("reset-area");
+    if (myRole === "p1" || isCpuMode) {
+      if (resetArea) resetArea.style.display = "block";
+      if (waitMsg) waitMsg.style.display = "none";
+    } else {
+      if (resetArea) resetArea.style.display = "none";
+      if (waitMsg) {
+        waitMsg.style.display = "block";
+        waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`;
+      }
+    }
   }
 
 // 4. ログ更新処理
