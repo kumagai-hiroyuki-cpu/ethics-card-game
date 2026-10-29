@@ -712,57 +712,58 @@ function listenToRoom(id) {
   const roomRef = db ? db.ref("rooms/" + id) : null;
   if (!roomRef) return;
 
-  roomRef.on("value", (snapshot) => {
+ db.ref("rooms/" + roomId).on("value", (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      gameState = data;
+        gameState = data;
 
-// オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
-    if (!isCpuMode && gameState.phase === "command_select") {
-        if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
-            if (myRole === "p1") {
-                processBattlePhase();
-                // 計算後の最新状態 (ログ含む) をFirebaseへ保存
-                db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+        // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
+        if (!isCpuMode && gameState.phase === "command_select") {
+            if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
+                if (myRole === "p1") {
+                    processBattlePhase();
+                    // 計算後の最新状態 (ログ含む) をFirebaseへ保存
+                    db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+                }
             }
         }
-    }
 
-    // 両チームのデータが揃っているか確認
-    const hasP1Data = gameState.p1Team && gameState.p1Team.length > 0;
-    const hasP2Data = gameState.p2Team && gameState.p2Team.length > 0;
+        // 両チームのデータが揃っているか確認
+        const hasP1Data = gameState.p1Team && gameState.p1Team.length > 0;
+        const hasP2Data = gameState.p2Team && gameState.p2Team.length > 0;
 
-    if (hasP1Data && hasP2Data) {
-        const p1Alive = gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
-        const p2Alive = gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
+        if (hasP1Data && hasP2Data) {
+            const p1Alive = gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
+            const p2Alive = gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
 
-        // どちらかのチームが全滅した場合のみ終了フェーズへ
-        if (!p1Alive || !p2Alive) {
-            gameState.phase = "finished";
+            // どちらかのチームが全滅した場合のみ終了フェーズへ
+            if (!p1Alive || !p2Alive) {
+                gameState.phase = "finished";
 
-            if (!p1Alive && !p2Alive) {
-                addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
-            } else if (!p2Alive) {
-                const winMsg = isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
-                addLogMessage(winMsg);
-            } else if (!p1Alive) {
-                const winMsg = isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！";
-                addLogMessage(winMsg);
+                if (!p1Alive && !p2Alive) {
+                    addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+                } else if (!p2Alive) {
+                    const winMsg = isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
+                    addLogMessage(winMsg);
+                } else if (!p1Alive) {
+                    const winMsg = isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！";
+                    addLogMessage(winMsg);
+                }
+
+                // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+                const commandInputs = document.getElementById("command-inputs");
+                const resetArea = document.getElementById("reset-area");
+                if (commandInputs) commandInputs.style.display = "none";
+                if (resetArea) resetArea.style.display = "block";
+
+                updateGameUI();
+                return;
             }
+        }
 
-            // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
-            const commandInputs = document.getElementById("command-inputs");
-            const resetArea = document.getElementById("reset-area");
-            if (commandInputs) commandInputs.style.display = "none";
-            if (resetArea) resetArea.style.display = "block";
-
-            updateGameUI();
-            return;
-  }
+        // 受信した最新の gameState をもとにUIとログを更新
+        updateGameUI();
     }
-
-    // 受信した最新の gameState をもとにUIとログを更新
-    updateGameUI();
 });
 
 // === UI更新処理 ===
