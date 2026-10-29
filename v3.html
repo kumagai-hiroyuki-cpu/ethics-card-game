@@ -763,7 +763,13 @@ function listenToRoom(id) {
 
         // 受信した最新の gameState をもとにUIとログを更新
         updateGameUI();
-    }
+    }else{ 
+        // 部屋データがなくなった（P1がリセットした）場合の処理
+        if (!isCpuMode) {
+            alert("ホストが部屋をリセットしました。タイトル画面に戻ります。");
+            location.reload(); // ページをリロード
+        }
+    } 
   });
 }
 // === UI更新処理 ===
