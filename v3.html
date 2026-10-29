@@ -768,6 +768,9 @@ function listenToRoom(id) {
 }
 // === UI更新処理 ===
 function updateGameUI() {
+　// ★P1(ホスト)またはCPU戦なら常にリセットボタンを表示、P2なら非表示
+  const resetArea = document.getElementById("reset-area");
+  if (resetArea) resetArea.style.display = (myRole === "p1" || isCpuMode) ? "block" : "none";
   if (!gameState) return;
 
   // 1. プレイヤー役割・名前の描画
@@ -828,15 +831,13 @@ function updateGameUI() {
     if (myPlayerData && myPlayerData.cards) {
       updateSelectOptions(myPlayerData.cards);
     }
-  } else if (gameState.phase === "finished") { // ← ★ここから追加
-    if (commandInputs) commandInputs.style.display = "none"; 
+ } else if (gameState.phase === "finished") {
+    if (commandInputs) commandInputs.style.display = "none";
     
-    const resetArea = document.getElementById("reset-area");
+    // resetAreaの処理は関数の先頭に移動したので、ここでは待機メッセージの制御のみ行う
     if (myRole === "p1" || isCpuMode) {
-      if (resetArea) resetArea.style.display = "block";
       if (waitMsg) waitMsg.style.display = "none";
     } else {
-      if (resetArea) resetArea.style.display = "none";
       if (waitMsg) {
         waitMsg.style.display = "block";
         waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`;
