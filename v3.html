@@ -742,7 +742,7 @@ db.ref("rooms/" + roomId).on("value", (snapshot) => {
 
                 if (!p1Alive && !p2Alive) {
                     addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
-                } else if (!p2Alive) {
+                 else if (!p2Alive) {
                     const winMsg = isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
                     addLogMessage(winMsg);
                 } else if (!p1Alive) {
