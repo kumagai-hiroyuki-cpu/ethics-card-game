@@ -1356,8 +1356,19 @@ function applySynergyBuff(cards) {
     }
   });
 }
-</script> 
-
+ // カード画像を拡大表示する関数
+  function openCardModal(imgSrc) {
+      const modal = document.getElementById("card-modal");
+      const modalImg = document.getElementById("enlarged-card-img");
+      modalImg.src = imgSrc;
+      modal.style.display = "block";
+  }
+  // 拡大表示を閉じる関数
+  function closeCardModal() {
+      document.getElementById("card-modal").style.display = "none";
+  }
+ 
+</script>
   <div id="card-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); text-align: center; cursor: pointer;" onclick="closeCardModal()">
       <img id="enlarged-card-img" style="max-width: 95%; max-height: 90vh; margin-top: 5vh; border-radius: 10px;">
       <p style="color: white; margin-top: 10px; font-weight: bold;">画面をタップして閉じる</p>
