@@ -722,11 +722,15 @@ function listenToRoom(id) {
         if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
           if (myRole === "p1") {
             processBattlePhase();
-            // 計算後の最新状態（ログ含む）をFirebaseへ保存
+            // 計算後の最新状態 (ログ含む) をFirebaseへ保存
             db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
-          }
         }
-      }
+    }
+}
+
+const p1Alive = gameState.p1Team && gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
+const p2Alive = gameState.p2Team && gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
+
 if (!p1Alive || !p2Alive) {
     gameState.phase = "finished";
 
