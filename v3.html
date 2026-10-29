@@ -717,18 +717,18 @@ function listenToRoom(id) {
     if (data) {
       gameState = data;
 
-      // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
-      if (!isCpuMode && gameState.phase === "command_select") {
+// オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
+    if (!isCpuMode && gameState.phase === "command_select") {
         if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
-          if (myRole === "p1") {
-            processBattlePhase();
-            // 計算後の最新状態 (ログ含む) をFirebaseへ保存
-            db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+            if (myRole === "p1") {
+                processBattlePhase();
+                // 計算後の最新状態 (ログ含む) をFirebaseへ保存
+                db.ref("rooms/" + roomId).set(sanitizeObject(gameState));
+            }
         }
     }
-}
 
-// 両チームのデータが揃っているか確認
+    // 両チームのデータが揃っているか確認
     const hasP1Data = gameState.p1Team && gameState.p1Team.length > 0;
     const hasP2Data = gameState.p2Team && gameState.p2Team.length > 0;
 
@@ -749,24 +749,21 @@ function listenToRoom(id) {
                 const winMsg = isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！";
                 addLogMessage(winMsg);
             }
+
+            // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+            const commandInputs = document.getElementById("command-inputs");
+            const resetArea = document.getElementById("reset-area");
+            if (commandInputs) commandInputs.style.display = "none";
+            if (resetArea) resetArea.style.display = "block";
+
+            updateGameUI();
+            return;
         }
     }
 
-   // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
-        const commandInputs = document.getElementById("command-inputs");
-        const resetArea = document.getElementById("reset-area");
-        if (commandInputs) commandInputs.style.display = "none";
-        if (resetArea) resetArea.style.display = "block";
-
-        updateGameUI();
-        return;
-    }
-}
-      // 受信した最新の gameState をもとにUIとログを更新
-      updateGameUI();
-    }
-  });
-}
+    // 受信した最新の gameState をもとにUIとログを更新
+    updateGameUI();
+});
 
 // === UI更新処理 ===
 function updateGameUI() {
