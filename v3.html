@@ -1356,17 +1356,67 @@ function applySynergyBuff(cards) {
     }
   });
 }
- // カード画像を拡大表示する関数
-  function openCardModal(imgSrc) {
-      const modal = document.getElementById("card-modal");
-      const modalImg = document.getElementById("enlarged-card-img");
-      modalImg.src = imgSrc;
-      modal.style.display = "block";
+
+// カード詳細モーダルを開く関数
+function openModal(cardId) {
+  if (!cardId) return;
+
+  const card = CARD_DATABASE.find(c => c.id === cardId || c.name === cardId);
+  if (!card) return;
+
+  let rawImg = card.image || card.icon || card.img || '';
+  if (rawImg && !rawImg.startsWith('http') && !rawImg.startsWith('images/')) {
+    rawImg = `images/${rawImg}`;
   }
-  // 拡大表示を閉じる関数
-  function closeCardModal() {
-      document.getElementById("card-modal").style.display = "none";
+
+  const modalImg = document.getElementById("modal-img");
+  if (modalImg) modalImg.src = rawImg || "https://via.placeholder.com/300x180?text=No+Image";
+
+  const modalTitle = document.getElementById("modal-title");
+  if (modalTitle) modalTitle.innerText = card.name || "不明";
+
+  const modalRank = document.getElementById("modal-rank");
+  if (modalRank) modalRank.innerText = card.rank ? `Rank: ${card.rank}` : "";
+
+  const modalType = document.getElementById("modal-type");
+  if (modalType) modalType.innerText = card.type ? `属性: ${card.type}` : "";
+
+  const activeVal = document.getElementById("modal-active-val");
+  if (activeVal) activeVal.innerText = card.activeVal ?? card.activePt ?? 0;
+
+  const skillName = document.getElementById("modal-skill-name");
+  if (skillName) skillName.innerText = card.skillName || "-";
+
+  const skillDesc = document.getElementById("modal-skill-desc");
+  if (skillDesc) skillDesc.innerText = card.skillDesc || "-";
+
+  const passiveVal = document.getElementById("modal-passive-val");
+  if (passiveVal) passiveVal.innerText = card.passiveVal ?? card.passivePt ?? 0;
+
+  const passiveName = document.getElementById("modal-passive-name");
+  if (passiveName) passiveName.innerText = card.passiveName || "-";
+
+  const passiveDesc = document.getElementById("modal-passive-desc");
+  if (passiveDesc) passiveDesc.innerText = card.passiveDesc || "-";
+
+  const tagsElem = document.getElementById("modal-tags");
+  if (tagsElem) {
+    const tags = Array.isArray(card.synergyTags) 
+      ? card.synergyTags.join(" / ") 
+      : (card.synergyTags || "なし");
+    tagsElem.innerText = tags;
   }
+
+  const modalOverlay = document.getElementById("card-modal");
+  if (modalOverlay) modalOverlay.style.display = "flex";
+}
+
+function closeModal() {
+  const modalOverlay = document.getElementById("card-modal");
+  if (modalOverlay) modalOverlay.style.display = "none";
+}
+
+</script>
  
 </script>
   <div id="card-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); text-align: center; cursor: pointer;" onclick="closeCardModal()">
