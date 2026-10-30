@@ -613,15 +613,33 @@ function startCpuBattle() {
   if (setupArea) setupArea.style.display = "none";
   if (gameArea) gameArea.style.display = "block";
 
-  // ★ デバッグ用のカード指定があれば、1枚目を強制上書きする
-  if (window.debugAttackerCard) {
-    if (window.p1Cards && Array.isArray(window.p1Cards)) window.p1Cards[0] = JSON.parse(JSON.stringify(window.debugAttackerCard));
-    if (window.playerState && window.playerState.cards) window.playerState.cards[0] = JSON.parse(JSON.stringify(window.debugAttackerCard));
+// ★ デバッグ用のカード指定があれば、gameState の 1枚目を強制上書きする
+  if (window.debugAttackerCard && gameState && gameState.p1 && gameState.p1.cards) {
+    const overrideP1 = JSON.parse(JSON.stringify(window.debugAttackerCard));
+    // ステータスプロパティの補正処理（startCpuBattle内と同等）
+    overrideP1.hp = overrideP1.hp ?? overrideP1.c?.maxHp ?? 100;
+    overrideP1.currentHP = overrideP1.currentHP ?? overrideP1.hp;
+    overrideP1.maxHp = overrideP1.maxHp ?? 100;
+    overrideP1.atk = overrideP1.atk ?? 20;
+    overrideP1.baseAtk = overrideP1.baseAtk ?? overrideP1.c?.atk ?? 20;
+    overrideP1.skillUsed = false;
+    overrideP1.isFlipped = false;
+
+    gameState.p1.cards[0] = overrideP1;
   }
 
-  if (window.debugDefenderCard) {
-    if (window.p2Cards && Array.isArray(window.p2Cards)) window.p2Cards[0] = JSON.parse(JSON.stringify(window.debugDefenderCard));
-    if (window.enemyState && window.enemyState.cards) window.enemyState.cards[0] = JSON.parse(JSON.stringify(window.debugDefenderCard));
+  if (window.debugDefenderCard && gameState && gameState.p2 && gameState.p2.cards) {
+    const overrideP2 = JSON.parse(JSON.stringify(window.debugDefenderCard));
+    // ステータスプロパティの補正処理
+    overrideP2.hp = overrideP2.hp ?? overrideP2.c?.maxHp ?? 100;
+    overrideP2.currentHP = overrideP2.currentHP ?? overrideP2.hp;
+    overrideP2.maxHp = overrideP2.maxHp ?? 100;
+    overrideP2.atk = overrideP2.atk ?? 20;
+    overrideP2.baseAtk = overrideP2.baseAtk ?? overrideP2.c?.atk ?? 20;
+    overrideP2.skillUsed = false;
+    overrideP2.isFlipped = false;
+
+    gameState.p2.cards[0] = overrideP2;
   }
 
   // 画面表示を最新に更新
