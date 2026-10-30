@@ -348,18 +348,20 @@ const specialSkillLogic = {
     addLogMessage(`💥 [${pName}] ${attacker.name} の「支配者の重撃(ドミネイション・インパクト)」！ 味方全員の命を極限（HP1）まで捧げ、自身の攻撃力が【+${sacrificedHp}】上昇した！！`);
   },
 
-  "erasmus": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const westernIds = ["socrates", "platon", "aristoteles", "kant", "hegel", "descartes", "nietzsche", "erasmus", "spinoza", "sartre"];
+ "erasmus": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 敵・味方両方の陣営を処理
     [actorObj, targetObj].forEach(side => {
       side.cards.forEach(c => {
-        if (c.hp > 0 && westernIds.includes(c.id)) {
-          const diff = Math.floor(Math.random() * 31) - 15;
+        // 生存しており、かつタイプが「西洋」の思想家が対象
+        if (c.hp > 0 && c.type === "西洋") {
+          const diff = Math.floor(Math.random() * 31) - 15; // -15 ～ +15 のランダム変動
           c.atk = Math.max(1, c.atk + diff);
         }
       });
     });
     addLogMessage(`🃏 [${pName}]${attacker.name} の「痴愚神礼讃」！ 場の西洋思想家たちのステータスが狂乱し乱高下した！`);
   },
+
 
   "calvin": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let killedCount = 0;
