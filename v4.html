@@ -192,6 +192,54 @@ document.addEventListener('DOMContentLoaded', () => {
   initDebugMenu();
 });
 
+// 選択した思想家を即座に場に出すデバッグ関数
+function spawnDebugCard(targetSide) {
+  const selectEl = document.getElementById('debug-card-select');
+  if (!selectEl) return;
+  const selectedCardId = selectEl.value;
+  if (!selectedCardId) return;
+  
+  // データベースからカードを取得
+  const originalCard = CARD_DATABASE.find(c => String(c.id) === String(selectedCardId));
+  if (!originalCard) return;
+
+  // ディープコピーで新しいインスタンスを作成
+  const newCard = JSON.parse(JSON.stringify(originalCard));
+
+  // カードのステータス初期化
+  if (typeof initializeCardState === 'function') {
+    initializeCardState(newCard);
+  }
+
+  // 1. 1vs1用の旧形式（testAttacker / testDefender）の更新
+  if (targetSide === 'attacker') {
+    window.testAttacker = newCard;
+  } else {
+    window.testDefender = newCard;
+  }
+
+  // 2. 3vs3用のチーム構造（p1Cards / p2Cards や playerState / enemyState など）の先頭カードを置き換え
+  if (targetSide === 'attacker') {
+    if (window.p1Cards && Array.isArray(window.p1Cards)) window.p1Cards[0] = newCard;
+    if (window.playerState && window.playerState.cards) window.playerState.cards[0] = newCard;
+    if (window.myCards && Array.isArray(window.myCards)) window.myCards[0] = newCard;
+  } else {
+    if (window.p2Cards && Array.isArray(window.p2Cards)) window.p2Cards[0] = newCard;
+    if (window.enemyState && window.enemyState.cards) window.enemyState.cards[0] = newCard;
+    if (window.opponentCards && Array.isArray(window.opponentCards)) window.opponentCards[0] = newCard;
+  }
+
+  if (typeof addLogMessage === 'function') {
+    addLogMessage(`🛠️ [デバッグ] ${targetSide === 'attacker' ? 'あなた' : '相手チーム'} の1番目のカードに【${newCard.name}】をセットしました。`);
+  }
+
+  // 3. 画面描画UIの再更新
+  if (typeof updateBattleUI === "function") updateBattleUI();
+  if (typeof renderBoard === "function") renderBoard();
+  if (typeof updateScreen === "function") updateScreen();
+  if (typeof render === "function") render();
+}
+  
 // ==========================================
 // 思想家カードゲーム バトル基礎関数群
 // ==========================================
