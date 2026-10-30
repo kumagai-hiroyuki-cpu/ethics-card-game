@@ -613,6 +613,20 @@ function startCpuBattle() {
   if (setupArea) setupArea.style.display = "none";
   if (gameArea) gameArea.style.display = "block";
 
+  // ★ デバッグ用のカード指定があれば、1枚目を強制上書きする
+  if (window.debugAttackerCard) {
+    if (window.p1Cards && Array.isArray(window.p1Cards)) window.p1Cards[0] = JSON.parse(JSON.stringify(window.debugAttackerCard));
+    if (window.playerState && window.playerState.cards) window.playerState.cards[0] = JSON.parse(JSON.stringify(window.debugAttackerCard));
+  }
+
+  if (window.debugDefenderCard) {
+    if (window.p2Cards && Array.isArray(window.p2Cards)) window.p2Cards[0] = JSON.parse(JSON.stringify(window.debugDefenderCard));
+    if (window.enemyState && window.enemyState.cards) window.enemyState.cards[0] = JSON.parse(JSON.stringify(window.debugDefenderCard));
+  }
+
+  // 画面表示を最新に更新
+  if (typeof updateBattleUI === "function") updateBattleUI();
+  
   updateGameUI();
   if (typeof triggerBattleStartPassives === "function") {
     triggerBattleStartPassives();
