@@ -1041,6 +1041,7 @@ const specialSkillLogic = {
 
 
   "watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 1. 全カードのバフ・状態異常をリセット
     [actorObj, targetObj].forEach(side => {
       side.cards.forEach(c => {
         c.atkBuff = false;
@@ -1053,21 +1054,45 @@ const specialSkillLogic = {
     let totalStolenHp = 0;
     let totalStolenAtk = 0;
 
+    // 2. 敵陣全員からHPとATKを半分ずつ奪う
     targetObj.cards.forEach(enemy => {
-      if (enemy.hp > 0) {
-        let hpCut = Math.floor(enemy.hp / 2);
+      let currentEnemyHp = enemy.currentHP !== undefined ? enemy.currentHP : enemy.hp;
+      if (currentEnemyHp > 0) {
+        let hpCut = Math.floor(currentEnemyHp / 2);
         let atkCut = Math.floor(enemy.atk / 2);
-        enemy.hp -= hpCut;
+        
+        if (enemy.currentHP !== undefined) enemy.currentHP -= hpCut;
+        enemy.hp = (enemy.hp || currentEnemyHp) - hpCut;
+        
         enemy.atk -= atkCut;
         totalStolenHp += hpCut;
         totalStolenAtk += atkCut;
       }
     });
 
-    attacker.hp += totalStolenHp;
+    // 3. 奪ったHPを「通常通り最大HPを上限として」回復（第3引数はなし、または false）
+    if (typeof applyHeal === "function") {
+      applyHeal(attacker, totalStolenHp);
+    } else {
+      // applyHeal がない場合の通常回復処理（maxHP で頭打ちにする）
+      let maxHpVal = attacker.maxHP !== undefined ? attacker.maxHP : attacker.maxHp;
+      if (attacker.currentHP !== undefined) {
+        attacker.currentHP = Math.min(maxHpVal, attacker.currentHP + totalStolenHp);
+      }
+      if (attacker.hp !== undefined) {
+        attacker.hp = Math.min(maxHpVal, attacker.hp + totalStolenHp);
+      }
+    }
+
+    // 4. 奪ったATKを自身に加算（攻撃力は上限なく伸びます）
     attacker.atk += totalStolenAtk;
 
-    addLogMessage(`☯️ [${pName}] ${attacker.name} の「風土改変」！ 敵全体のHPとATKを半減させ、和辻自身が（HP+${totalStolenHp} / ATK+${totalStolenAtk}）奪い取った！`);
+    // 5. ログ出力とUI更新
+    addLogMessage(`👥 [${pName}] ${attacker.name} の「間柄的存在」！ 敵陣全員の能力を削ぎ落とし、自身のHPを回復＆ATKを${totalStolenAtk}上昇させた！`);
+
+    if (typeof updateBattleUI === "function") {
+      updateBattleUI();
+    }
   },
 
  "miyoshi_keiko": function(pName, attacker, target, actorObj, targetObj, activePt) {
