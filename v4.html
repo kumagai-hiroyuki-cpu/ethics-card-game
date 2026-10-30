@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>倫理 思想家カードバトル (3vs3)</title>
+  <style>
+    body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 10px; margin: 0; user-select: none; }
+    h1 { text-align: center; color: #f39c12; margin: 10px 0; font-size: 1.4em; }
+
+    .room-setup { background: #2c3e50; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
+    .status-msg { font-weight: bold; color: #1abc9c; margin: 10px 0; }
+
+    .battle-field { display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; }
+    .player-board { background: #2a2a2a; padding: 10px; border-radius: 10px; border: 2px solid #444; }
+    .board-title { margin: 0 0 10px 0; font-size: 1em; display: flex; justify-content: space-between; }
+
+    .card-list { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .card-container { width: 30%; max-width: 140px; background: #333; border-radius: 6px; overflow: hidden; border: 2px solid #555; cursor: pointer; position: relative; transition: transform 0.1s; }
+    .card-container:active { transform: scale(0.95); }
+    .card-container.defeated { opacity: 0.3; filter: grayscale(100%); pointer-events: none; }
+    .card-container.synergy-active { border: 2px solid #f1c40f; box-shadow: 0 0 8px #f1c40f; }
+
+    .card-image { width: 100%; height: 140px; object-fit: cover; display: block; background: #000; }
+    .card-info { padding: 5px; background: rgba(0,0,0,0.8); }
+    .card-name { font-size: 0.8em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f1c40f; text-align: center; }
+
+    .hp-bar { background: #555; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 4px; position: relative; }
+    .hp-fill { background: #2ecc71; height: 100%; transition: width 0.3s; }
+    .hp-text { position: absolute; width: 100%; text-align: center; font-size: 9px; line-height: 12px; top: 0; left: 0; color: #fff; font-weight: bold; }
+
+    .controls { background: #2c3e50; padding: 12px; border-radius: 8px; text-align: center; margin-top: 15px; max-width: 900px; margin-left: auto; margin-right: auto; }
+    .skill-box { background: #1a252f; border: 1px solid #1abc9c; border-radius: 6px; padding: 8px; margin: 8px 0; font-size: 0.85em; text-align: left; }
+    .skill-title { color: #f39c12; font-weight: bold; margin-bottom: 2px; }
+    .skill-desc { color: #ecf0f1; font-size: 0.8em; }
+
+    button { background: #e67e22; color: #fff; border: none; padding: 8px 16px; font-size: 14px; border-radius: 4px; cursor: pointer; margin: 4px; font-weight: bold; }
+    button.cpu-btn { background: #27ae60; font-size: 15px; padding: 10px 20px; }
+    button:disabled { background: #7f8c8d; cursor: not-allowed; opacity: 0.6; }
+    select { padding: 6px; font-size: 13px; border-radius: 4px; margin-bottom: 6px; }
+
+    .log-window { background: #000; border: 1px solid #444; padding: 8px; height: 140px; overflow-y: scroll; font-family: monospace; font-size: 0.8em; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto; }
+
+    /* モーダル (カード拡大表示) */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-card { background: #2c3e50; border: 2px solid #f1c40f; border-radius: 10px; width: 85%; max-width: 300px; padding: 15px; text-align: center; }
+    .modal-img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; }
+    .modal-title { font-size: 1.2em; color: #f1c40f; font-weight: bold; margin: 8px 0 4px 0; }
+    .modal-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #e67e22; font-size: 0.8em; margin-bottom: 6px; font-weight: bold; }
+    .modal-detail { font-size: 0.8em; text-align: left; background: #1a252f; padding: 8px; border-radius: 6px; margin-top: 6px; }
+
+<!-- v4用 デバッグ・検証パネル -->
+<div id="debug-panel" style="margin: 15px; padding: 12px; border: 2px dashed #4a90e2; background: #f4f8ff; border-radius: 8px;">
+  <h4 style="margin: 0 0 8px 0; color: #2c3e50;">🛠️ テスト用 思想家直接召喚機能</h4>
+  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <label for="debug-card-select"><b>思想家を選択:</b></label>
+    <select id="debug-card-select" style="padding: 5px; min-width: 200px;">
+      <option value="">-- ロード中 --</option>
+    </select>
+    <button onclick="spawnDebugCard('attacker')" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">攻撃側にセット</button>
+    <button onclick="spawnDebugCard('defender')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">防御側にセット</button>
+  </div>
+</div>
+
+　　button, .btn, input[type="button"] {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+} 
+  
+  </style>
+
+  <!-- Firebase SDK (安定版v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="specialSkills.js"></script>
+<script src="passiveSkills.js"></script>
+</head>
+
+<body>
+
+<h1>📜 倫理 思想家カードバトル (3vs3)</h1>
+
+<div class="room-setup" id="setup-area">
+  <div style="margin-bottom: 12px;">
+    <button class="cpu-btn" onclick="startCpuBattle()">🤖 コンピュータと対戦 (一人プレイ)</button>
+  </div>
+  <hr style="border: 0; border-top: 1px solid #555; margin: 15px 0;">
+  <input type="text" id="room-id-input" placeholder="部屋ID (例: 333)" style="padding: 6px; font-size: 14px;">
+  <button onclick="joinRoom('p1')">部屋を作る (P1)</button>
+  <button onclick="joinRoom('p2')">部屋に入る (P2)</button>
+  <div id="connection-status" class="status-msg"></div>
+</div>
+
+<div class="battle-field" id="game-area" style="display:none;">
+  <div class="player-board" id="enemy-board">
+    <div class="board-title"><span>⚔️ <span id="enemy-title">相手チーム</span></span></div>
+    <div id="enemy-cards" class="card-list"></div>
+  </div>
+  <div class="player-board" id="my-board">
+    <div class="board-title"><span>🛡️ あなた (<span id="my-role"></span>)</span></div>
+    <div id="my-cards" class="card-list"></div>
+  </div>
+</div>
+
+<div class="controls" id="action-area" style="display:none;">
+  <div id="wait-msg" class="status-msg" style="font-size: 0.9em;">コマンドを選択してください</div>
+  <div id="command-inputs">
+    行動する思想家: <select id="attacker-select" onchange="updateSkillDisplay()"></select><br>
+    <span style="font-size:0.8em; color:#bdc3c7;">※攻撃ターゲットは自動でランダムに選ばれます</span><br>
+</div>
+<!-- アクションエリア内に再戦用ボタンを追加 -->
+<div id="reset-area" style="display: none; margin-top: 10px;">
+  <button class="cpu-btn" onclick="resetGame()" style="background-color: #e67e22;">
+    🔄 タイトル画面へ戻る（もう一度遊ぶ）
+  </button>
+</div>
+    <!-- スキル内容表示エリア -->
+    <div class="skill-box">
+      <div class="skill-title">✨ アクティブ [Pt:<span id="active-val">0</span> / 発動率:<span id="active-rate">0</span>%]: <span id="skill-name">-</span> <span id="skill-used-status" style="color:#e74c3c;"></span></div>
+      <div class="skill-desc" id="skill-desc">-</div>
+      <div class="skill-title" style="margin-top: 6px; color: #e74c3c;">🌀 パッシブ [Pt:<span id="passive-val">0</span> / 発動率:<span id="passive-rate">0</span>%]: <span id="passive-name">-</span></div>
+      <div class="skill-desc" id="passive-desc">-</div>
+    </div>
+
+    <button onclick="submitCommand('attack')">通常攻撃</button>
+    <button id="skill-btn" onclick="submitCommand('skill')">スキル発動</button>
+  </div>
+</div>
+
+<div id="log" class="log-window"></div>
+
+<!-- カード拡大モーダル -->
+<div class="modal-overlay" id="card-modal" onclick="closeModal()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <img id="modal-img" class="modal-img" src="">
+    <div id="modal-title" class="modal-title"></div>
+    <div>
+      <span id="modal-rank" class="modal-badge"></span>
+      <span id="modal-type" class="modal-badge" style="background:#3498db;"></span>
+    </div>
+    <div class="modal-detail">
+      <strong style="color:#f39c12;">【アクティブスキル】</strong> (Pt:<span id="modal-active-val"></span>)<br>
+      <span id="modal-skill-name" style="font-weight:bold;"></span>: <span id="modal-skill-desc" style="color:#bdc3c7;"></span>
+      <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
+      <strong style="color:#e74c3c;">【パッシブスキル】</strong> (Pt:<span id="modal-passive-val"></span>)<br>
+      <span id="modal-passive-name" style="font-weight:bold;"></span>: <span id="modal-passive-desc" style="color:#bdc3c7;"></span>
+      <hr style="border:0; border-top:1px solid #444; margin:6px 0;">
+      <strong style="color:#1abc9c;">【絆タグ】</strong><br>
+      <span id="modal-tags" style="color:#1abc9c;"></span>
+    </div>
+    <button onclick="closeModal()" style="margin-top:12px;">閉じる</button>
+  </div>
+</div>
+
+<script>
+// === Firebase接続設定 ===
+const firebaseConfig = {
+  apiKey: "AIzaSyCFr2e2VVWPV8JIf9cIRUh94fLxGFpNR1w",
+  authDomain: "ethics-card-game-4598a.firebaseapp.com",
+  databaseURL: "https://ethics-card-game-4598a-default-rtdb.firebaseio.com",
+  projectId: "ethics-card-game-4598a",
+  storageBucket: "ethics-card-game-4598a.firebasestorage.app",
+  messagingSenderId: "1094270378260",
+  appId: "1:1094270378260:web:aef75b9c4108f2bd472201",
+  measurementId: "G-R8SYD17150"
+};
+
+// 思想家データベース（CARD_DATABASE）の初期化後にドロップダウンを作成
+function initDebugMenu() {
+  const selectEl = document.getElementById('debug-card-select');
+  if (!selectEl || !window.CARD_DATABASE) return;
+
+  selectEl.innerHTML = ''; // リセット
+  CARD_DATABASE.forEach(card => {
+    const opt = document.createElement('option');
+    opt.value = card.id;
+    opt.textContent = `[${card.type || '不明'}] ${card.name}`;
+    selectEl.appendChild(opt);
+  });
+}
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let CARD_DATABASE = [];
+
+
+// 選択したカードを指定した陣営に召喚する関数
+function spawnDebugCard(targetSide) {
+  const selectEl = document.getElementById('debug-card-select');
+  const selectedCardId = selectEl.value;
+  
+  // データベースからカード情報を取得（ディープコピー）
+  const originalCard = CARD_DATABASE.find(c => c.id === selectedCardId);
+  if (!originalCard) return;
+  const newCard = JSON.parse(JSON.stringify(originalCard));
+
+  // ステータスの初期化処理
+  if (typeof initializeCardState === 'function') {
+    initializeCardState(newCard);
+  }
+
+  // 指定した陣営のオブジェクトにセット
+  if (targetSide === 'attacker') {
+    window.testAttacker = newCard;
+    addLogMessage(`🛠️ [デバッグ] 攻撃側に ${newCard.name} を召喚しました。`);
+  } else {
+    window.testDefender = newCard;
+    addLogMessage(`🛠️ [デバッグ] 防御側に ${newCard.name} を召喚しました。`);
+  }
+
+  // 画面表示を更新
+  if (typeof updateBattleUI === "function") {
+    updateBattleUI();
+  }
+}
+
+// cards.json の読み込み完了時（385行目付近の CARD_DATABASE = data; の直後など）に呼び出す
+// initDebugMenu();
+
+// ==========================================
+// 思想家カードゲーム バトル基礎関数群
+// ==========================================
+
+// ------------------------------------------
+// 1. 初期化・フラグ管理（ステップ3）
+// ------------------------------------------
+function initializeCardState(card) {
+  card.currentHP = card.maxHP || card.hp; // スプレッドシートのHPを最大HPとする
+  card.isDead = false;
+
+  // 防御・回避系
+  card.isInvincible = false;
+  card.evadeRate = 0;
+  card.damageReduction = 0;
+  card.nullifyRank = null;
+
+  // 復活・身代わり・回復系
+  card.hasGuts = false;
+  card.hasRevive = false;
+  card.coverTarget = null;
+  card.regenAmount = 0;
+
+  // 状態異常系（ステップ4）
+  card.stunTurns = 0;
+  card.silenceTurns = 0;
+
+  // バフ・デバフ系
+  card.attackBuff = 0;
+  card.defenseBuff = 0;
+}
+
+// ------------------------------------------
+// 2. ダメージ・回復・バフ処理（ステップ1・3・4統合）
+// ------------------------------------------
+function applyDamage(attacker, defender, baseDamage) {
+  // ① 身代わり判定
+  let actualTarget = defender;
+  if (defender.coverTarget && !defender.coverTarget.isDead) {
+    actualTarget = defender.coverTarget;
+    console.log(`${actualTarget.name}がダメージを肩代わり！`);
+  }
+
+  // ② 特定ランク無効判定
+  if (actualTarget.nullifyRank && attacker.rank !== actualTarget.nullifyRank) return 0;
+
+  // ③ 無敵・回避判定
+  if (actualTarget.isInvincible) return 0;
+  if (actualTarget.evadeRate > 0 && Math.random() < actualTarget.evadeRate) {
+    console.log(`${actualTarget.name}は攻撃を回避した！`);
+    return 0;
+  }
+
+  // ④ ダメージ計算（基本ダメージ＋バフ補正－軽減率）
+  let rawDamage = Math.max(0, baseDamage + (attacker.attackBuff || 0) - (actualTarget.defenseBuff || 0));
+  let finalDamage = Math.floor(rawDamage * (1 - actualTarget.damageReduction));
+
+  actualTarget.currentHP -= finalDamage;
+
+  // ⑤ 食いしばり・退場判定
+  if (actualTarget.currentHP <= 0) {
+    if (actualTarget.hasGuts) {
+      actualTarget.currentHP = 1;
+      actualTarget.hasGuts = false;
+    } else {
+      actualTarget.currentHP = 0;
+      actualTarget.isDead = true;
+    }
+  }
+  return finalDamage;
+}
+
+function dealTrueDamage(target, amount) { // 貫通ダメージ
+  target.currentHP -= amount;
+  if (target.currentHP <= 0) target.isDead = true;
+}
+
+function executeInstantKill(target) { // 即死処理
+  target.currentHP = 0;
+  target.hasGuts = false;
+  target.isDead = true;
+}
+
+function applyHeal(target, amount, allowOverflow = false) { // 回復処理
+  if (target.currentHP <= 0 && !target.isDead) return 0;
+  target.currentHP += amount;
+  if (!allowOverflow && target.currentHP > target.maxHP) {
+    target.currentHP = target.maxHP;
+  }
+}
+
+function applyBuff(target, statType, amount) { // バフ処理
+  if (statType === 'attack') target.attackBuff += amount;
+  else if (statType === 'defense') target.defenseBuff += amount;
+}
+
+function clearAllBuffs(target) { // バフ・状態異常リセット
+  target.attackBuff = 0;
+  target.defenseBuff = 0;
+  target.isInvincible = false;
+  target.evadeRate = 0;
+  target.stunTurns = 0;
+}
+
+// ------------------------------------------
+// 3. 属性（タグ）判定処理（ステップ2）
+// ------------------------------------------
+function hasTag(card, tagName) {
+  return card.synergyTags && card.synergyTags.includes(tagName);
+}
+
+function countTagInParty(party, tagName) {
+  return party.filter(card => !card.isDead && hasTag(card, tagName)).length;
+}
+
+function applyEffectToTag(party, tagName, effectType, amount) {
+  party.forEach(card => {
+    if (!card.isDead && hasTag(card, tagName)) {
+      if (effectType === 'hp') applyHeal(card, amount);
+      else if (effectType === 'attack') applyBuff(card, 'attack', amount);
+    }
+  });
+}
+
+// ------------------------------------------
+// 4. システム判定・ダイス（ステップ4）
+// ------------------------------------------
+function canAct(card) {
+  if (card.stunTurns > 0) {
+    card.stunTurns--;
+    return false;
+  }
+  return true;
+}
+
+function rollDice(sides = 6) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+
+// ==========================================
+// 基礎関数群 ここまで
+// ==========================================
+
+// ==========================================
+// 5. スキルのルーティング（振り分け）関数
+// ==========================================
+function executeSkill(attacker, targetParty, skillData) {
+  if (!canAct(attacker)) {
+    console.log(`${attacker.name}は動けない！`);
+    return;
+  }
+
+  // ※仮置き：ターゲットは相手パーティーの先頭
+  let target = targetParty[0];
+
+  switch (skillData.type) {
+    case 'damage':
+      console.log(`${attacker.name}の攻撃！`);
+      applyDamage(attacker, target, skillData.value);
+      break;
+    case 'heal':
+      console.log(`${attacker.name}の回復！`);
+      applyHeal(attacker, skillData.value);
+      break;
+    case 'buff':
+      console.log(`${attacker.name}の強化！`);
+      applyBuff(attacker, 'attack', skillData.value);
+      break;
+    case 'debuff':
+      console.log(`${attacker.name}の妨害！`);
+      applyBuff(target, 'attack', -skillData.value);
+      break;
+    case 'special':
+      console.log(`${attacker.name}の特殊スキル発動！`);
+      executeSpecialSkill(attacker, targetParty, skillData);
+      break;
+    default:
+      console.log("効果がない、またはパッシブスキルです");
+      break;
+  }
+}
+
+// ------------------------------------------
+// 特殊スキル（special）専用の分岐処理
+// ------------------------------------------
+function executeSpecialSkill(attacker, targetParty, skillData) {
+  let target = targetParty[0];
+
+  if (attacker.name === "近松門左衛門") {
+    executeInstantKill(target);
+    executeInstantKill(attacker);
+  } else if (attacker.name === "マズロー") {
+    let dice = rollDice(6);
+    console.log(`ダイスの目は${dice}！`);
+  }
+}
+// ==========================================
+// 6. UIテスト用連携コード
+// ==========================================
+let testAttacker, testDefender;
+
+// 画面のHP表示を更新する関数
+function updateBattleUI() {
+  if (!testAttacker || !testDefender) return;
+  const atkNameEl = document.getElementById('attacker-name');
+  if (atkNameEl) atkNameEl.innerText = testAttacker.name;
+
+  const atkHpEl = document.getElementById('attacker-hp');
+  if (atkHpEl) atkHpEl.innerText = testAttacker.currentHP;
+
+  const defNameEl = document.getElementById('defender-name');
+  if (defNameEl) defNameEl.innerText = testDefender.name;
+
+  const defHpEl = document.getElementById('defender-hp');
+  if (defHpEl) defHpEl.innerText = Math.max(0, testDefender.currentHP);
+} 
+fetch('cards.json')
+  .then(response => response.json())
+  .then(data => {
+    data.forEach(card => {
+      if (typeof initializeCardState === 'function') {
+        initializeCardState(card);
+      }
+    });
+    CARD_DATABASE = data;
+
+    if (Array.isArray(CARD_DATABASE) && CARD_DATABASE.length >= 2) {
+      testAttacker = CARD_DATABASE[0];
+      testDefender = CARD_DATABASE[1];
+      if (typeof updateBattleUI === 'function') {
+        updateBattleUI();
+      }
+    }
+
+    console.log("思想家データ全 " + CARD_DATABASE.length + " 件の読み込みが完了しました！");
+  })
+  .catch(error => console.error("cards.json 読み込みエラー:", error));
+
+let myRole = "";
+let roomId = "";
+let roomRef = null;
+let gameState = null;
+let currentLogs = [];
+let isCpuMode = false; // CPU対戦モードフラグ
+
+// 戦闘ログ追加関数
+function addLogMessage(msg) {
+  // gameStateがまだない場合は一時配列を作る
+  if (!window.currentLogs) window.currentLogs = [];
+  window.currentLogs.push(msg);
+
+  if (typeof gameState !== "undefined" && gameState) {
+    if (!gameState.logs) gameState.logs = [];
+    gameState.logs.push(msg);
+  }
+
+  // 画面上のログエリアを直接更新
+  const logElem = document.getElementById("logContainer") || 
+                  document.getElementById("battleLog") || 
+                  document.getElementById("log") || 
+                  document.getElementById("logs");
+
+  if (logElem) {
+    const p = document.createElement("p");
+    p.textContent = msg;
+    p.style.margin = "2px 0";
+    logElem.appendChild(p);
+    logElem.scrollTop = logElem.scrollHeight;
+  }
+}
+
+function applyTeamSynergy(cards, teamName) {
+  const tagCounts = {};
+  cards.forEach(c => {
+    if (c.synergyTags && Array.isArray(c.synergyTags)) {
+      c.synergyTags.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1; });
+    }
+  });
+
+  cards.forEach(c => {
+    c.hasSynergy = false;
+    if (c.synergyTags && Array.isArray(c.synergyTags)) {
+      c.synergyTags.forEach(tag => { if (tagCounts[tag] >= 2) c.hasSynergy = true; });
+    }
+
+    if (c.hasSynergy && !c.synergyApplied) {
+      c.maxHp = Math.floor(c.maxHp * 1.2);
+      c.hp = c.maxHp;
+      c.synergyApplied = true;
+      addLogMessage("🤝 【絆発動】[" + teamName + "] " + c.name + " の絆効果発動！ HPが1.2倍(" + c.maxHp + ")に強化！");
+    }
+  });
+}
+// ゲーム状態をリセットして初期画面に戻す関数
+function resetGame() {
+  // ★ オンライン対戦時：P1(ホスト)がリセットした場合はFirebase上の部屋データを削除してP2に通知する
+  if (!isCpuMode && db && roomId) {
+    db.ref("rooms/" + roomId).remove(); // 部屋データを消去！
+    db.ref("rooms/" + roomId).off();
+  }
+
+  // 1. 変数とログの初期化
+  gameState = null;
+  currentLogs = [];
+  window.currentLogs = [];
+  isCpuMode = false;
+  myRole = "";
+  roomId = "";
+
+  // 3. 画面の表示・非表示を初期状態に切り替え
+  const setupArea = document.getElementById("setup-area");
+  const gameArea = document.getElementById("game-area");
+  const actionArea = document.getElementById("action-area");
+  const logElem = document.getElementById("log");
+
+  if (setupArea) setupArea.style.display = "block";
+  if (gameArea) gameArea.style.display = "none";
+  if (actionArea) actionArea.style.display = "none";
+  if (logElem) logElem.innerHTML = "";
+
+  // 4. 入力フォームのリセット
+  const roomInput = document.getElementById("room-id-input");
+  if (roomInput) roomInput.value = "";
+}
+// === CPU対戦開始 ===
+function startCpuBattle() {
+  isCpuMode = true;
+  myRole = "p1";
+  window.currentLogs = []; // ログをリセット
+
+  const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
+
+  const p1Cards = shuffled.slice(0, 3).map(c => ({
+    ...c,
+    hp: c.hp ?? c.maxHp ?? 100,
+    currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+    maxHp: c.maxHp ?? 100,
+    atk: c.atk ?? 20,
+    baseAtk: c.baseAtk ?? c.atk ?? 20,
+    skillUsed: false,
+    isFlipped: false
+  }));
+
+  const p2Cards = shuffled.slice(3, 6).map(c => ({
+    ...c,
+    hp: c.hp ?? c.maxHp ?? 100,
+    currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+    maxHp: c.maxHp ?? 100,
+    atk: c.atk ?? 20,
+    baseAtk: c.baseAtk ?? c.atk ?? 20,
+    skillUsed: false,
+    isFlipped: false
+  }));
+
+  // ① まず gameState を作成
+  gameState = {
+    turnCount: 1,
+    p1: { name: "あなた", cards: p1Cards, cmd: null },
+    p2: { name: "CPU", cards: p2Cards, cmd: null },
+    phase: "card_reveal",
+    revealedCount: 0,
+    logs: ["⚔ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
+  };
+
+  // ② gameState 作成後にシナジーバフを適用（ログが gameState.logs に追記される）
+  applySynergyBuff(gameState.p1.cards);
+  applySynergyBuff(gameState.p2.cards);
+
+  const setupArea = document.getElementById("setup-area");
+  const gameArea = document.getElementById("game-area");
+  if (setupArea) setupArea.style.display = "none";
+  if (gameArea) gameArea.style.display = "block";
+
+  updateGameUI();
+  if (typeof triggerBattleStartPassives === "function") {
+    triggerBattleStartPassives();
+  }
+}
+
+
+// === ルーム作成 / 参加処理 (対人戦) ===
+function joinRoom(role) {
+  const inputElem = document.getElementById("room-id-input");
+  let inputRoomId = inputElem ? inputElem.value.trim() : "";
+
+  if (!inputRoomId) {
+    if (role === 'p1') {
+      inputRoomId = "100";
+      if (inputElem) inputElem.value = "100";
+    } else {
+      alert("部屋IDを入力してください（例: 333）");
+      return;
+    }
+  }
+
+  roomId = inputRoomId;
+  myRole = role;
+  isCpuMode = false;
+
+  if (typeof db === "undefined" || !db) {
+    alert("Firebaseに接続されていません。");
+    return;
+  }
+
+  const roomRef = db.ref("rooms/" + roomId);
+
+  if (role === 'p1') {
+    const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
+    const p1Cards = shuffled.slice(0, 3).map(c => ({
+      ...c,
+      hp: c.hp ?? c.maxHp ?? 100,
+      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+      maxHp: c.maxHp ?? 100,
+      atk: c.atk ?? 20,
+      skillUsed: false,
+      isFlipped: false
+    }));
+    const p2Cards = shuffled.slice(3, 6).map(c => ({
+      ...c,
+      hp: c.hp ?? c.maxHp ?? 100,
+      currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+      maxHp: c.maxHp ?? 100,
+      atk: c.atk ?? 20,
+      skillUsed: false,
+      isFlipped: false
+    }));
+
+     // ① まず newGameState を作成する
+    const newGameState = {
+      phase: "waiting_p2",
+      turnCount: 1,
+      p1: { name: "P1(あなた)", cards: p1Cards, cmd: null },
+      p2: { name: "P2(待機中)", cards: p2Cards, cmd: null },
+      revealedCount: 0,
+      logs: ["部屋を作成しました (部屋ID: " + roomId + ")。P2の参加を待っています..."]
+    };
+
+    // ② グローバル変数 gameState に代入する
+    gameState = newGameState;
+
+    // ③ 代入した後にシナジーバフを適用する（これでログに「絆効果発動」が残ります）
+    applySynergyBuff(gameState.p1.cards);
+    applySynergyBuff(gameState.p2.cards);
+
+    // ④ シナジーログが含まれた gameState を Firebase に保存する
+    roomRef.set(sanitizeObject(gameState), function(error) {
+      if (error) {
+        alert("部屋の作成に失敗しました。");
+      } else {
+        listenToRoom(roomId);
+        const setupArea = document.getElementById("setup-area");
+        const gameArea = document.getElementById("game-area");
+        if (setupArea) setupArea.style.display = "none";
+        if (gameArea) gameArea.style.display = "block";
+        updateGameUI();
+      }
+    });
+
+    roomRef.set(sanitizeObject(newGameState), function(error) {
+      if (error) {
+        alert("部屋の作成に失敗しました。");
+      } else {
+        listenToRoom(roomId);
+        const setupArea = document.getElementById("setup-area");
+        const gameArea = document.getElementById("game-area");
+        if (setupArea) setupArea.style.display = "none";
+        if (gameArea) gameArea.style.display = "block";
+        updateGameUI();
+      }
+    });
+  } else if (role === 'p2') {
+    roomRef.once("value", function(snapshot) {
+      const data = snapshot.val();
+      if (data) {
+        data.phase = "card_reveal";
+        if (data.p2) data.p2.name = "P2(あなた)";
+        if (data.p1) data.p1.name = "P1(相手)";
+        data.logs = [...(data.logs || []), "⚔️ P2が参加しました！各自カードをめくってください。"];
+
+        roomRef.update(sanitizeObject(data), function(error) {
+          if (!error) {
+            listenToRoom(roomId);
+            const setupArea = document.getElementById("setup-area");
+            const gameArea = document.getElementById("game-area");
+            if (setupArea) setupArea.style.display = "none";
+            if (gameArea) gameArea.style.display = "block";
+            updateGameUI();
+          }
+        });
+      } else {
+        alert("部屋ID 「" + roomId + "」 が存在しません。先にP1で部屋を作成してください。");
+      }
+    });
+  }
+}
+
+function revealNextCard() {
+  if (!gameState || gameState.phase !== "card_reveal") return;
+
+  const myData = gameState[myRole];
+  if (!myData || !myData.cards) return;
+
+  // 未オープン（isFlipped: false）の最初のカードを探す
+  const unrevealedCard = myData.cards.find(c => !c.isFlipped);
+
+  if (unrevealedCard) {
+    unrevealedCard.isFlipped = true;
+  }
+
+  // 自分の全カードがオープンされたかチェック
+  const allMyFlipped = myData.cards.every(c => c.isFlipped);
+
+  if (isCpuMode) {
+    if (allMyFlipped) {
+      // CPU戦：相手（CPU）のカードも全オープンにしてコマンド選択へ
+      gameState.p2.cards.forEach(c => c.isFlipped = true);
+      gameState.phase = "command_select";
+      addLogMessage("⚔️ すべての思想家が登場しました！コマンドを選択してください。");
+    }
+    updateGameUI();
+  } else {
+    // オンライン対戦：Firebaseへ自分のカード状態を更新
+    const enemyRole = myRole === "p1" ? "p2" : "p1";
+    const enemyData = gameState[enemyRole];
+    const allEnemyFlipped = enemyData && enemyData.cards ? enemyData.cards.every(c => c.isFlipped) : false;
+
+    let updates = {};
+    updates[`rooms/${roomId}/${myRole}/cards`] = sanitizeObject(myData.cards);
+
+    // お互いに3枚すべてめくり終わっていたらコマンド選択フェーズへ移行
+    if (allMyFlipped && allEnemyFlipped) {
+      updates[`rooms/${roomId}/phase`] = "command_select";
+      updates[`rooms/${roomId}/logs`] = [...(gameState.logs || []), "⚔️ お互いの準備が完了しました！コマンドを選択してください。"];
+    } else if (allMyFlipped) {
+      addLogMessage("⚔️ あなたの思想家が出揃いました！相手の準備を待っています...");
+      updates[`rooms/${roomId}/logs`] = gameState.logs || [];
+    }
+
+    if (db && roomId) {
+      db.ref().update(updates);
+    }
+  }
+}
+
+// undefinedなプロパティを完全に除去する安全化関数
+function sanitizeObject(obj) {
+  return JSON.parse(JSON.stringify(obj, (key, value) => value === undefined ? null : value));
+}
+
+// Firebaseのデータ監視関数（部屋の同期処理）
+function listenToRoom(id) {
+  if (isCpuMode) return;
+  const roomRef = db ? db.ref("rooms/" + id) : null;
+  if (!roomRef) return;
+
+  db.ref("rooms/" + id).on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        gameState = data;
+
+        // オンライン対戦時：両者のコマンドが揃っていたらP1側でターンを解決
+        if (!isCpuMode && gameState.phase === "command_select") {
+            if (gameState.p1 && gameState.p1.cmd && gameState.p2 && gameState.p2.cmd) {
+                if (myRole === "p1") {
+                    processBattlePhase();
+                    // 計算後の最新状態 (ログ含む) をFirebaseへ保存
+                    db.ref("rooms/" + id).set(sanitizeObject(gameState));
+                }
+            }
+        }
+
+        // 両チームのデータが揃っているか確認
+        const hasP1Data = gameState.p1Team && gameState.p1Team.length > 0;
+        const hasP2Data = gameState.p2Team && gameState.p2Team.length > 0;
+
+        if (hasP1Data && hasP2Data) {
+            const p1Alive = gameState.p1Team.some(c => (c.currentHP ?? c.hp) > 0);
+            const p2Alive = gameState.p2Team.some(c => (c.currentHP ?? c.hp) > 0);
+
+            // どちらかのチームが全滅した場合のみ終了フェーズへ
+            if (!p1Alive || !p2Alive) {
+                gameState.phase = "finished";
+
+                if (!p1Alive && !p2Alive) {
+                    addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+                } else if (!p2Alive) {
+                    const winMsg = isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
+                    addLogMessage(winMsg);
+                } else if (!p1Alive) {
+                    const winMsg = isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！";
+                    addLogMessage(winMsg);
+                }
+
+                // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+                const commandInputs = document.getElementById("command-inputs");
+                const resetArea = document.getElementById("reset-area");
+                if (commandInputs) commandInputs.style.display = "none";
+                if (resetArea) resetArea.style.display = "block";
+
+                updateGameUI();
+                return;
+            }
+        }
+
+        // 受信した最新の gameState をもとにUIとログを更新
+        updateGameUI();
+    }else{ 
+        // 部屋データがなくなった（P1がリセットした）場合の処理
+        if (!isCpuMode) {
+            alert("ホストが部屋をリセットしました。タイトル画面に戻ります。");
+            location.reload(); // ページをリロード
+        }
+    } 
+  });
+}
+// === UI更新処理 ===
+function updateGameUI() {
+　// ★P1(ホスト)またはCPU戦なら常にリセットボタンを表示、P2なら非表示
+  const resetArea = document.getElementById("reset-area");
+  if (resetArea) resetArea.style.display = (myRole === "p1" || isCpuMode) ? "block" : "none";
+  if (!gameState) return;
+
+  // 1. プレイヤー役割・名前の描画
+  const myRoleElem = document.getElementById("my-role");
+  if (myRoleElem && gameState.p1) {
+    myRoleElem.textContent = myRole === "p1" ? (gameState.p1.name || "あなた") : (gameState.p2.name || "あなた");
+  }
+
+  // 2. 自分のカードと相手のカードの描画
+  const myCardsElem = document.getElementById("my-cards");
+  const enemyCardsElem = document.getElementById("enemy-cards");
+
+  const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2;
+  const enemyPlayerData = myRole === "p1" ? gameState.p2 : gameState.p1;
+
+  if (myCardsElem && myPlayerData && myPlayerData.cards) {
+    myCardsElem.innerHTML = myPlayerData.cards.map(c => renderCard(c, false)).join("");
+  }
+
+  if (enemyCardsElem && enemyPlayerData && enemyPlayerData.cards) {
+    enemyCardsElem.innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
+  }
+
+   // 3. アクションエリア・メッセージ・ボタン制御
+  const actionArea = document.getElementById("action-area");
+  const waitMsg = document.getElementById("wait-msg");
+  const commandInputs = document.getElementById("command-inputs");
+
+  if (actionArea) actionArea.style.display = "block";
+
+  if (gameState.phase === "waiting_p2") {
+    if (commandInputs) commandInputs.style.display = "none";
+    if (waitMsg) {
+      waitMsg.style.display = "block";
+      waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
+    }
+   } else if (gameState.phase === "card_reveal") {
+    if (commandInputs) commandInputs.style.display = "none";
+    if (waitMsg) {
+      waitMsg.style.display = "block";
+
+      const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c.isFlipped).length : 0;
+
+      if (myFlippedCount < 3) {
+        waitMsg.innerHTML = `
+          <button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            🃏 カードをめくる (${myFlippedCount} / 3)
+          </button>
+        `;
+      } else {
+        waitMsg.innerText = "相手の準備完了を待っています...";
+      }
+    }
+  } else if (gameState.phase === "command_select") {
+    if (commandInputs) commandInputs.style.display = "block";
+    if (waitMsg) waitMsg.style.display = "none";
+
+    if (myPlayerData && myPlayerData.cards) {
+      updateSelectOptions(myPlayerData.cards);
+    }
+ } else if (gameState.phase === "finished") {
+    if (commandInputs) commandInputs.style.display = "none";
+    
+    // resetAreaの処理は関数の先頭に移動したので、ここでは待機メッセージの制御のみ行う
+    if (myRole === "p1" || isCpuMode) {
+      if (waitMsg) waitMsg.style.display = "none";
+    } else {
+      if (waitMsg) {
+        waitMsg.style.display = "block";
+        waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`;
+      }
+    }
+  }
+
+// 4. ログ更新処理
+  const logElem = document.getElementById("log") || 
+                  document.getElementById("logContainer") || 
+                  document.getElementById("battleLog");
+
+  if (logElem) {
+    const logsToRender = (gameState && gameState.logs && gameState.logs.length > 0) 
+                          ? gameState.logs 
+                          : (window.currentLogs || []);
+
+   logElem.innerHTML = "";
+    logsToRender.forEach(msg => {
+      const div = document.createElement("div");
+      div.textContent = msg;
+      div.style.margin = "2px 0";
+      logElem.appendChild(div);
+    });
+    logElem.scrollTop = logElem.scrollHeight;
+  }
+}
+
+// 戦闘開始時に1度だけ実行する関数の例
+function triggerBattleStartPassives() {
+  if (!gameState) return;
+
+  ["p1", "p2"].forEach(role => {
+    const playerObj = gameState[role];
+    const enemyObj = gameState[role === "p1" ? "p2" : "p1"];
+
+    if (playerObj && playerObj.cards) {
+      playerObj.cards.forEach(card => {
+        if (card.hp > 0) {
+          triggerPassive("onBattleStart", card, playerObj, enemyObj);
+        }
+      });
+    }
+  });
+}
+
+if (!isCpuMode && gameState && gameState.p1.cmd && gameState.p2.cmd && myRole === "p1") {
+  processBattlePhase();
+}
+
+function renderCard(c, isEnemy) {
+  // まだめくられていない (裏面) の場合
+  if (!c || !c.isFlipped) {
+    return `
+      <div class="card-container card-back" style="min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a2a2a; border: 2px solid #555; border-radius: 6px;">
+        <div style="font-size: 36px; color: #e74c3c; font-weight: bold;">?</div>
+      </div>
+    `;
+  }
+
+  // オープン済み (表面) の場合
+  const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
+  const isDefeated = (c.currentHP ?? c.hp) <= 0;
+  
+  // 画像パスの補完処理 (images/ フォルダを参照)
+  let rawImg = c.image || c.icon || c.img || '';
+  if (rawImg && !rawImg.startsWith('http') && !rawImg.startsWith('images/')) {
+    rawImg = `images/${rawImg}`;
+  }
+
+  return `
+  <div class="card-container ${isDefeated ? 'card-defeated' : ''}" onclick="openModal('${c.id || c.name}')" style="box-sizing: border-box; padding: 0; border-radius: 6px; overflow: hidden; position: relative; background: #fff; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 200px;">
+      
+      <!-- カード画像 -->
+      ${rawImg ? `<img src="${rawImg}" alt="${c.name}" style="width: 100%; height: auto; display: block; object-fit: cover;" onerror="this.style.display='none'">` : ''}
+               
+      <!-- 下部ステータス帯 (名前 & HPバー) -->
+      <div style="background: rgba(0, 0, 0, 0.85); width: 100%; padding: 4px 6px; box-sizing: border-box; text-align: center;">
+        <div style="font-weight: bold; font-size: 0.85em; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">${c.name}</div>
+        <div style="background: #444; height: 8px; border-radius: 4px; overflow: hidden; margin: 0 auto 2px auto; width: 90%;">
+          <div style="background: #2ecc71; width: ${hpPercent}%; height: 100%;"></div>
+        </div>
+        <div style="font-size: 0.75em; color: #fff; font-weight: bold;">${c.currentHP ?? c.hp} / ${c.maxHp ?? 100}</div>
+      </div>
+    </div>
+  `;
+}
+
+function updateSelectOptions(myCards) {
+  const atkSelect = document.getElementById("attacker-select");
+  if (!atkSelect || !myCards) return;
+
+  const currentAtkVal = atkSelect.value;
+  atkSelect.innerHTML = myCards
+    .map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk}) ${c.skillUsed ? '[スキル済]':''}</option>`).join('');
+
+  if (currentAtkVal !== "") atkSelect.value = currentAtkVal;
+  updateSkillDisplay();
+}
+
+function updateSkillDisplay() {
+  const myData = gameState ? gameState[myRole] : null;
+  if (!myData) return;
+
+  const atkIdx = document.getElementById("attacker-select").value || 0;
+  const selectedCard = myData.cards[atkIdx];
+  const skillBtn = document.getElementById("skill-btn");
+  const statusEl = document.getElementById("skill-used-status");
+
+  if (selectedCard) {
+    const actPt = selectedCard.activeVal ?? 0;
+    const pasPt = selectedCard.passiveVal ?? 0;
+    const actRate = Math.min(100, Math.floor((actPt / 50) * 100));
+    const pasRate = Math.min(100, Math.floor((pasPt / 50) * 100));
+
+    document.getElementById("active-val").innerText = actPt;
+    document.getElementById("active-rate").innerText = actRate;
+    document.getElementById("skill-name").innerText = selectedCard.skillName || "-";
+    document.getElementById("skill-desc").innerText = selectedCard.skillDesc || "-";
+
+    document.getElementById("passive-val").innerText = pasPt;
+    document.getElementById("passive-rate").innerText = pasRate;
+    document.getElementById("passive-name").innerText = selectedCard.passiveName || "-";
+    document.getElementById("passive-desc").innerText = selectedCard.passiveDesc || "-";
+
+    if (actPt === 0) {
+      skillBtn.disabled = true;
+      skillBtn.title = "アクティブスキルポイントが0のため発動できません";
+      if (statusEl) statusEl.innerText = "";
+   } else {
+      skillBtn.disabled = false;
+      skillBtn.title = "";
+      if (statusEl) statusEl.innerText = "";
+    }
+  }
+}
+
+function submitCommand(type) {
+  console.log("① submitCommandが呼ばれました。タイプ:", type);
+
+  if (!gameState) {
+    console.log("エラー: gameStateが存在しません");
+    return;
+  }
+
+  // 思想家選択ドロップダウン（select要素）を自動探査
+  let actorSelect = document.getElementById("actor-select") || 
+                    document.getElementById("select-actor") || 
+                    document.getElementById("my-actor-select") ||
+                    document.getElementById("attacker-select");
+
+  if (!actorSelect) {
+    actorSelect = document.querySelector("#action-area select") || document.querySelector("select");
+  }
+
+  if (!actorSelect) {
+    console.log("エラー: 思想家選択用のselect要素が見つかりません");
+    return;
+  }
+
+  const actorIndex = parseInt(actorSelect.value, 10) || 0;
+  console.log("② 選択されたアクターインデックス:", actorIndex);
+
+  const cmd = {
+    type: type,
+    attacker: actorIndex
+  };
+
+  if (isCpuMode) {
+    // プレイヤーのコマンドを設定
+    gameState[myRole].cmd = cmd;
+
+    // CPUのコマンドを自動生成
+    generateCpuCommand();
+
+    console.log("③ 両者のコマンドがセットされました。ターン解決(processBattlePhase)へ進みます");
+
+    // CPU戦のターン解決処理を実行
+    processBattlePhase();
+  } else {
+    // オンライン対戦の場合（Firebaseへ送信）
+    // roomRef.child(...) の代わりに確実にdbから直接指定する
+    db.ref("rooms/" + roomId + "/" + myRole + "/cmd").set(cmd);
+  }
+
+  updateGameUI();
+}
+// === CPUの自動思考ロジック ===
+function generateCpuCommand() {
+  const aliveIndices = gameState.p2.cards
+    .map((c, i) => ({ ...c, idx: i }))
+    .filter(c => c.hp > 0);
+
+  if (aliveIndices.length === 0) return;
+
+  // ランダムに思想家を選択
+  const chosen = aliveIndices[Math.floor(Math.random() * aliveIndices.length)];
+  const actPt = chosen.activeVal || 0;
+
+  // スキルが使えてPtがあれば、50%の確率でスキルを使用、それ以外は通常攻撃
+  let type = "attack";
+  if (actPt > 0 && !chosen.skillUsed && Math.random() < 0.5) {
+    type = "skill";
+  }
+
+  gameState.p2.cmd = { type: type, attacker: chosen.idx };
+}
+
+function getRandomTarget(targetCards) {
+  const aliveTargets = targetCards.map((c, i) => ({ ...c, originalIdx: i })).filter(c => c.hp > 0);
+  if (aliveTargets.length === 0) return null;
+  const randIdx = Math.floor(Math.random() * aliveTargets.length);
+  return aliveTargets[randIdx].originalIdx;
+}
+
+function getAttributeMultiplier(atkType, defType) {
+  if ((atkType === "源流" || atkType === "他者") && defType === "西洋") return 1.5;
+  if (atkType === "西洋" && defType === "日本") return 1.5;
+  if (atkType === "日本" && (defType === "源流" || defType === "他者")) return 1.5;
+  return 1.0;
+}
+
+function processBattlePhase() {
+  const p1Name = isCpuMode ? "あなた" : "P1";
+  const p2Name = isCpuMode ? "CPU" : "P2";
+
+  addLogMessage("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
+
+  // ターン開始時パッシブ
+  [gameState.p1, gameState.p2].forEach(pObj => {
+    if (pObj && pObj.cards) {
+      pObj.cards.forEach(card => {
+        const hp = card.currentHP ?? card.hp ?? 0;
+        if (hp > 0 && typeof triggerPassive === "function") {
+          triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1);
+        }
+      });
+    }
+  });
+
+  applyAction(p1Name, gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
+  applyAction(p2Name, gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
+
+  // ターン終了時パッシブ
+  [gameState.p1, gameState.p2].forEach(pObj => {
+    if (pObj && pObj.cards) {
+      const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1;
+      pObj.cards.forEach(card => {
+        const hp = card.currentHP ?? card.hp ?? 0;
+        if (hp > 0 && typeof triggerPassive === "function") {
+          triggerPassive("onTurnEnd", card, pObj, enemyObj);
+        }
+      });
+    }
+  });
+
+  // コマンドリセット
+  gameState.p1.cmd = null;
+  gameState.p2.cmd = null;
+
+  // 勝敗チェック（生存判定を currentHP ?? hp に統一）
+  const p1Alive = gameState.p1.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
+  const p2Alive = gameState.p2.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
+
+     if (!p1Alive || !p2Alive) {
+    gameState.phase = "finished";
+
+    if (!p1Alive && !p2Alive) {
+      addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+    } else if (!p2Alive) {
+      const winMsg = isCpuMode ? "🎉 Victory！ あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！";
+      addLogMessage(winMsg);
+    } else {
+      const loseMsg = isCpuMode ? "💀 Defeat... CPUの勝利です。" : "🎉 プレイヤー2 (P2) の勝利です！";
+      addLogMessage(loseMsg);
+    }
+
+    // 💡 勝敗が決まったらコマンド入力欄を隠し、リセットボタンを表示
+    const commandInputs = document.getElementById("command-inputs");
+    const resetArea = document.getElementById("reset-area");
+    if (commandInputs) commandInputs.style.display = "none";
+    if (resetArea) resetArea.style.display = "block";
+
+    updateGameUI();
+    return;
+  }
+
+  gameState.turnCount++;
+  updateGameUI();
+}
+function executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill) {
+  const currentHpVal = target.currentHP ?? target.hp ?? 0;
+  if (!target || currentHpVal <= 0) return;
+
+  // ① 属性倍率の計算
+  const mult = getAttributeMultiplier(attacker.type, target.type);
+  let finalDamage = Math.floor(baseDmg * mult);
+
+  if (attacker.atkBuff) {
+    finalDamage *= 2;
+    attacker.atkBuff = false;
+    addLogMessage("💨 " + attacker.name + " の攻撃力が2倍にアップしている！");
+  }
+
+  if (target.defenseBuff) {
+    finalDamage = Math.floor(finalDamage / 2);
+    target.defenseBuff = false;
+    addLogMessage("🌍 " + target.name + " は土の盾でダメージを半減した！");
+  }
+
+  if (target.fixedDamageVal !== undefined && target.fixedDamageVal !== null) {
+    finalDamage = target.fixedDamageVal;
+    target.fixedDamageVal = null;
+    addLogMessage("📐 " + target.name + " は「決定論」により、被ダメージが " + finalDamage + " に固定された！");
+  }
+
+  // ② 被弾時パッシブの処理
+  if (typeof triggerPassive === "function") {
+    const reducedDmg = triggerPassive("onTakeDamage", target, attacker, finalDamage);
+    if (typeof reducedDmg === "number") {
+      finalDamage = reducedDmg;
+    }
+  }
+
+  // ③ ダメージ適用とプロパティ同期
+  let effText = mult > 1.0 ? " (弱点突いた！)" : "";
+  const newHp = Math.max(0, currentHpVal - finalDamage);
+  target.currentHP = newHp;
+  target.hp = newHp;
+
+  addLogMessage("⚔️ [" + pName + "] " + attacker.name + " の攻撃！ " + target.name + " に " + finalDamage + " のダメージ！" + effText);
+
+  // ④ 死亡時パッシブの処理
+  if (newHp === 0) {
+    addLogMessage("💀 " + target.name + " は倒れた！");
+    if (typeof triggerPassive === "function") {
+      triggerPassive("onDeath", target, targetObj, actorObj);
+    }
+  }
+}
+function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
+  if (!cmd || !actorObj || !actorObj.cards || !actorObj.cards[cmd.attacker]) return;
+
+  const attacker = actorObj.cards[cmd.attacker];
+  const attackerHp = attacker.currentHP ?? attacker.hp ?? 0;
+
+  // 攻撃者がすでに倒れている場合は行動スキップ
+  if (attackerHp <= 0) return;
+
+  if (attacker.isStunned) {
+    addLogMessage(`💤 [${pName}] ${attacker.name} は罪を悔い改めており、行動できない！`);
+    attacker.isStunned = false; // 1回休んだら解除
+    return;
+  }
+
+  // 生存しているターゲットを取得
+  const tgtIdx = getRandomTarget(targetObj.cards);
+  const target = tgtIdx !== null ? targetObj.cards[tgtIdx] : null;
+
+  if (cmd.type === 'attack') {
+    if (target) {
+      executeDamage(pName, attacker, target, actorObj, targetObj, attacker.atk, false);
+    } else {
+      addLogMessage("⚠️ [" + pName + "] 攻撃対象が存在しません。");
+    }
+  } else {
+    const activePt = attacker.activeVal || 0;
+    if (activePt === 0) {
+      addLogMessage("⚠️ [" + pName + "] " + attacker.name + " はスキルを発動できない！");
+      return;
+    }
+
+    const activeRate = Math.min(100, Math.floor((activePt / 50) * 100));
+    const rand = Math.floor(Math.random() * 100);
+
+    if (rand >= activeRate) {
+      addLogMessage("🎲 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」不発... (確率:" + activeRate + "%)");
+      return;
+    }
+
+    let isCanceledByFestinger = false;
+    if (oppCmd && oppCmd.type === 'skill' && targetObj && targetObj.cards[oppCmd.attacker]) {
+      const oppAttacker = targetObj.cards[oppCmd.attacker];
+      const oppHp = oppAttacker.currentHP ?? oppAttacker.hp ?? 0;
+      if (oppAttacker.id === 'festinger' && oppHp > 0) {
+        const festingerRate = Math.min(100, Math.floor(((oppAttacker.activeVal || 0) / 50) * 100));
+        if (Math.floor(Math.random() * 100) < festingerRate) {
+          isCanceledByFestinger = true;
+        }
+      }
+    }
+
+    if (isCanceledByFestinger) {
+      addLogMessage("🚫 [" + pName + "] " + attacker.name + " のスキルはフェスティンガーの「認知的不協和」により無効化された！");
+      return;
+    }
+
+    addLogMessage("🔥 [" + pName + "] " + attacker.name + " のスキル「" + attacker.skillName + "」発動！ (発動率:" + activeRate + "%)");
+
+    const sType = attacker.skillType || attacker.type || "special";
+
+    switch (sType) {
+      case "damage":
+        if (target) {
+          const dmg = activePt * 2;
+          executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+        }
+        break;
+
+      case "debuff":
+        if (target) {
+          const diceMax = Math.max(1, Math.floor(activePt / 5));
+          const diceRoll = Math.floor(Math.random() * diceMax) + 1;
+          const reduced = Math.min(diceRoll, target.atk);
+          target.atk = Math.max(0, target.atk - reduced);
+          addLogMessage("🎲 [" + attacker.name + "] 1d" + diceMax + "ダイス ➔ 出た目:" + diceRoll + "！ " + target.name + " のATKを " + reduced + " 低下させた！(残ATK:" + target.atk + ")");
+        }
+        break;
+
+      case "heal":
+        const healAmt = activePt;
+        actorObj.cards.forEach(c => {
+          const cHp = c.currentHP ?? c.hp ?? 0;
+          if (cHp > 0) {
+            const newHp = Math.min(c.maxHp || 100, cHp + healAmt);
+            c.currentHP = newHp;
+            c.hp = newHp;
+          }
+        });
+        addLogMessage("✨ [" + attacker.name + "] の「" + attacker.skillName + "」！ 味方全員のHPが " + healAmt + " 回復！");
+        break;
+
+      case "buff":
+        const buffAmt = Math.max(1, Math.floor(activePt / 5));
+        actorObj.cards.forEach(c => {
+          const cHp = c.currentHP ?? c.hp ?? 0;
+          if (cHp > 0) c.atk += buffAmt;
+        });
+        addLogMessage("🔥 [" + attacker.name + "] の「" + attacker.skillName + "」！ 味方全員のATKが +" + buffAmt + " 上昇！");
+        break;
+
+      case "cancel":
+        addLogMessage("🛡️ [" + attacker.name + "] の「" + attacker.skillName + "」！ このターンの相手スキルを無効化！");
+        break;
+
+      case "special":
+      default:
+        executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activePt);
+        break;
+    }
+  }
+}
+
+function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activePt) {
+  // specialSkills.js に、この attacker.id が登録されているか確認
+  if (typeof specialSkillLogic !== 'undefined' && specialSkillLogic[attacker.id]) {
+    // 登録されていれば、その専用処理を呼び出す
+    specialSkillLogic[attacker.id](pName, attacker, target, actorObj, targetObj, activePt);
+  } else {
+    // まだ specialSkills.js に書いていないキャラの場合
+    addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。");
+  }
+}
+
+// === カード拡大モーダル表示処理 ===
+function openModal(cardId) {
+  const card = CARD_DATABASE.find(c => c.id === cardId);
+  if (!card) return;
+
+  document.getElementById("modal-img").src = card.image || "https://via.placeholder.com/300x180?text=No+Image";
+  document.getElementById("modal-title").innerText = card.name || "不明";
+  document.getElementById("modal-rank").innerText = card.rank ? `Rank: ${card.rank}` : "";
+  document.getElementById("modal-type").innerText = card.type ? `属性: ${card.type}` : "";
+
+  document.getElementById("modal-active-val").innerText = card.activeVal || 0;
+  document.getElementById("modal-skill-name").innerText = card.skillName || "-";
+  document.getElementById("modal-skill-desc").innerText = card.skillDesc || "-";
+
+　document.getElementById("modal-passive-val").innerText = card.passiveVal || 0;
+  document.getElementById("modal-passive-name").innerText = card.passiveName || "-";
+  document.getElementById("modal-passive-desc").innerText = card.passiveDesc || "-";
+
+    const tags = card.synergyTags ? card.synergyTags.join(" / ") : "なし";
+    document.getElementById("modal-tags").innerText = tags;
+
+    document.getElementById("card-modal").style.display = "flex";
+  }
+
+function closeModal() {
+  document.getElementById("card-modal").style.display = "none";
+}
+function applySynergyBuff(cards) {
+  if (!cards || !Array.isArray(cards)) return;
+
+  const tagCounts = {};
+  const tagToCards = {};
+
+  // 1. チーム内の全カードから有効なタグを集計（「男性」および空タグは除外）
+  cards.forEach(card => {
+    if (!card.synergyTags) return;
+    
+    // 文字列(カンマ区切り)と配列の両方のフォーマットに対応
+    const tags = Array.isArray(card.synergyTags) 
+      ? card.synergyTags 
+      : card.synergyTags.split(',').map(t => t.trim());
+
+    tags.forEach(tag => {
+      if (tag === "男性" || !tag) return;
+      
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      if (!tagToCards[tag]) tagToCards[tag] = [];
+      tagToCards[tag].push(card.name);
+    });
+  });
+
+  // 2. 2枚以上一致したシナジータグごとに「絆効果『〇〇』発動」をログ出力
+  Object.keys(tagCounts).forEach(tag => {
+    if (tagCounts[tag] >= 2) {
+      const memberNames = tagToCards[tag].join(" × ");
+      addLogMessage(`🤝 絆効果「${tag}」発動！ (${memberNames}) チームのHPが1.2倍に強化！`);
+    }
+  });
+
+  // 3. 対象カードのHPを1.2倍に補正
+  cards.forEach(card => {
+    if (!card.synergyTags) return;
+    
+    const tags = Array.isArray(card.synergyTags) 
+      ? card.synergyTags 
+      : card.synergyTags.split(',').map(t => t.trim());
+
+    const hasSynergy = tags.some(tag => tag !== "男性" && tagCounts[tag] >= 2);
+
+    if (hasSynergy && !card._synergyApplied) {
+      const baseHp = card.maxHp || card.hp || 60;
+      const boostedHp = Math.round(baseHp * 1.2);
+      
+      card.maxHp = boostedHp;
+      card.hp = boostedHp;
+      card.currentHP = boostedHp;
+      card._synergyApplied = true;
+    }
+  });
+}
+
+// カード詳細モーダルを開く関数
+function openModal(cardId) {
+  if (!cardId) return;
+
+  const card = CARD_DATABASE.find(c => c.id === cardId || c.name === cardId);
+  if (!card) return;
+
+  let rawImg = card.image || card.icon || card.img || '';
+  if (rawImg && !rawImg.startsWith('http') && !rawImg.startsWith('images/')) {
+    rawImg = `images/${rawImg}`;
+  }
+
+  const modalImg = document.getElementById("modal-img");
+  if (modalImg) modalImg.src = rawImg || "https://via.placeholder.com/300x180?text=No+Image";
+
+  const modalTitle = document.getElementById("modal-title");
+  if (modalTitle) modalTitle.innerText = card.name || "不明";
+
+  const modalRank = document.getElementById("modal-rank");
+  if (modalRank) modalRank.innerText = card.rank ? `Rank: ${card.rank}` : "";
+
+  const modalType = document.getElementById("modal-type");
+  if (modalType) modalType.innerText = card.type ? `属性: ${card.type}` : "";
+
+  const activeVal = document.getElementById("modal-active-val");
+  if (activeVal) activeVal.innerText = card.activeVal ?? card.activePt ?? 0;
+
+  const skillName = document.getElementById("modal-skill-name");
+  if (skillName) skillName.innerText = card.skillName || "-";
+
+  const skillDesc = document.getElementById("modal-skill-desc");
+  if (skillDesc) skillDesc.innerText = card.skillDesc || "-";
+
+  const passiveVal = document.getElementById("modal-passive-val");
+  if (passiveVal) passiveVal.innerText = card.passiveVal ?? card.passivePt ?? 0;
+
+  const passiveName = document.getElementById("modal-passive-name");
+  if (passiveName) passiveName.innerText = card.passiveName || "-";
+
+  const passiveDesc = document.getElementById("modal-passive-desc");
+  if (passiveDesc) passiveDesc.innerText = card.passiveDesc || "-";
+
+  const tagsElem = document.getElementById("modal-tags");
+if (tagsElem) {
+    const tags = Array.isArray(card.synergyTags)
+        ? card.synergyTags.join(" / ")
+        : (card.synergyTags || "なし");
+    tagsElem.innerText = tags;
+} // ★ if (tagsElem) を閉じる }
+
+const modalOverlay = document.getElementById("card-modal");
+if (modalOverlay) modalOverlay.style.display = "flex";
+} // ★ openModal() 関数自体を閉じる }
+
+function closeModal() {
+    const modalOverlay = document.getElementById("card-modal");
+    if (modalOverlay) modalOverlay.style.display = "none";
+}
+
+</script>
+  <div id="card-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); text-align: center; cursor: pointer;" onclick="closeCardModal()">
+      <img id="enlarged-card-img" style="max-width: 95%; max-height: 90vh; margin-top: 5vh; border-radius: 10px;">
+      <p style="color: white; margin-top: 10px; font-weight: bold;">画面をタップして閉じる</p>
+  </div>
+  
+</body> 
+</html>
