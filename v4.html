@@ -199,39 +199,24 @@ function spawnDebugCard(targetSide) {
   const selectedCardId = selectEl.value;
   if (!selectedCardId) return;
   
-  // データベースからカードを取得
+  // データベースからカードを取得 (型違い吸収のためString化して比較)
   const originalCard = CARD_DATABASE.find(c => String(c.id) === String(selectedCardId));
   if (!originalCard) return;
 
   // ディープコピーで新しいインスタンスを作成
   const newCard = JSON.parse(JSON.stringify(originalCard));
 
-  // カードのステータス初期化
-  if (typeof initializeCardState === 'function') {
-    initializeCardState(newCard);
-  }
-
-  // 1. 1vs1用の旧形式（testAttacker / testDefender）の更新
+  // デバッグ用にグローバル変数へ保持
   if (targetSide === 'attacker') {
-    window.testAttacker = newCard;
+    window.debugAttackerCard = newCard;
   } else {
-    window.testDefender = newCard;
-  }
-
-  // 2. 3vs3用のチーム構造（p1Cards / p2Cards や playerState / enemyState など）の先頭カードを置き換え
-  if (targetSide === 'attacker') {
-    if (window.p1Cards && Array.isArray(window.p1Cards)) window.p1Cards[0] = newCard;
-    if (window.playerState && window.playerState.cards) window.playerState.cards[0] = newCard;
-    if (window.myCards && Array.isArray(window.myCards)) window.myCards[0] = newCard;
-  } else {
-    if (window.p2Cards && Array.isArray(window.p2Cards)) window.p2Cards[0] = newCard;
-    if (window.enemyState && window.enemyState.cards) window.enemyState.cards[0] = newCard;
-    if (window.opponentCards && Array.isArray(window.opponentCards)) window.opponentCards[0] = newCard;
+    window.debugDefenderCard = newCard;
   }
 
   if (typeof addLogMessage === 'function') {
-    addLogMessage(`🛠️ [デバッグ] ${targetSide === 'attacker' ? 'あなた' : '相手チーム'} の1番目のカードに【${newCard.name}】をセットしました。`);
+    addLogMessage(`🛠️ [デバッグ選択] ${targetSide === 'attacker' ? 'あなた' : '相手チーム'} の1番目のカードに【${newCard.name}】を予約しました。`);
   }
+}
 
   // 3. 画面描画UIの再更新
   if (typeof updateBattleUI === "function") updateBattleUI();
@@ -572,6 +557,7 @@ function startCpuBattle() {
 
   const shuffled = [...CARD_DATABASE].sort(() => 0.5 - Math.random());
 
+  // ★ P1 (あなた) のカード3枚を生成
   const p1Cards = shuffled.slice(0, 3).map(c => ({
     ...c,
     hp: c.hp ?? c.maxHp ?? 100,
@@ -583,6 +569,24 @@ function startCpuBattle() {
     isFlipped: false
   }));
 
+  // ★ デバッグ予約があれば P1 の1枚目を上書き
+  if (window.debugAttackerCard) {
+    const raw = window.debugAttackerCard;
+    const baseHp = raw.hp ?? raw.maxHp ?? 100;
+    const baseAtk = raw.atk ?? 20;
+    p1Cards[0] = {
+      ...raw,
+      hp: baseHp,
+      currentHP: raw.currentHP ?? baseHp,
+      maxHp: raw.maxHp ?? baseHp,
+      atk: baseAtk,
+      baseAtk: raw.baseAtk ?? baseAtk,
+      skillUsed: false,
+      isFlipped: false
+    };
+  }
+
+  // ★ P2 (CPU) のカード3枚を生成
   const p2Cards = shuffled.slice(3, 6).map(c => ({
     ...c,
     hp: c.hp ?? c.maxHp ?? 100,
@@ -594,6 +598,23 @@ function startCpuBattle() {
     isFlipped: false
   }));
 
+  // ★ デバッグ予約があれば P2 の1枚目を上書き
+  if (window.debugDefenderCard) {
+    const raw = window.debugDefenderCard;
+    const baseHp = raw.hp ?? raw.maxHp ?? 100;
+    const baseAtk = raw.atk ?? 20;
+    p2Cards[0] = {
+      ...raw,
+      hp: baseHp,
+      currentHP: raw.currentHP ?? baseHp,
+      maxHp: raw.maxHp ?? baseHp,
+      atk: baseAtk,
+      baseAtk: raw.baseAtk ?? baseAtk,
+      skillUsed: false,
+      isFlipped: false
+    };
+  }
+
   // ① まず gameState を作成
   gameState = {
     turnCount: 1,
@@ -603,6 +624,9 @@ function startCpuBattle() {
     revealedCount: 0,
     logs: ["⚔ CPU対戦が開始されました！「カードをめくる」ボタンを押してください。"]
   };
+
+  // --- これ以降は元のコードのまま ---
+  // ② gameState 作成後にシナジーバフを適用...
 
   // ② gameState 作成後にシナジーバフを適用（ログが gameState.logs に追記される）
   applySynergyBuff(gameState.p1.cards);
