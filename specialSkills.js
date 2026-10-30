@@ -634,17 +634,26 @@ const specialSkillLogic = {
     addLogMessage(`🏃 [${pName}]${attacker.name} の「自由からの逃走」！ ${target.name} に ${dmg} ダメージを与え、安全な領域へ退避した！`);
   },
 
-  "hegel": function(pName, attacker, target, actorObj, targetObj, activePt) {
+"hegel": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let deadAllies = actorObj.cards.filter(c => c.hp <= 0);
     if (deadAllies.length > 0) {
       let revived = deadAllies[0];
       revived.hp = 40;
-      addLogMessage(`螺旋 [${pName}]${attacker.name} の「アウフヘーベン」！ 止揚の果てに ${revived.name} をHP40の新たな段階で復活させた！`);
+      if (revived.hasOwnProperty('currentHP')) {
+        revived.currentHP = 40; // currentHPを使っている場合はこちらも40に設定
+      }
+      addLogMessage(`🌀 [${pName}]${attacker.name} の「アウフヘーベン」！ 止揚の果てに ${revived.name} をHP40の新たな段階で復活させた！`);
     } else {
       attacker.atk += 15;
-      addLogMessage(`螺旋 [${pName}] ${attacker.name} の「アウフヘーベン」！ 倒れた味方はおらず、自身の存在を高めて攻撃力UP！`);
+      addLogMessage(`🌀 [${pName}] ${attacker.name} の「アウフヘーベン」！ 倒れた味方はおらず、自身の存在を高めて攻撃力UP！`);
+    }
+
+    // ★画面の表示を更新する関数の呼び出し
+    if (typeof updateBattleUI === "function") {
+      updateBattleUI();
     }
   },
+
 
   "beauvoir": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const maleIds = ["socrates", "platon", "aristoteles", "kant", "hegel", "nietzsche", "descartes", "hobbes", "marx", "freud"];
