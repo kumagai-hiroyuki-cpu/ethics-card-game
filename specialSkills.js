@@ -1040,7 +1040,7 @@ const specialSkillLogic = {
   },
 
 
-  "watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
+"watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
     // 1. 全カードのバフ・状態異常をリセット
     [actorObj, targetObj].forEach(side => {
       side.cards.forEach(c => {
@@ -1056,13 +1056,16 @@ const specialSkillLogic = {
 
     // 2. 敵陣全員からHPとATKを半分ずつ奪う
     targetObj.cards.forEach(enemy => {
+      // プロパティ名の表記揺れ（currentHP / hp）に対応
       let currentEnemyHp = enemy.currentHP !== undefined ? enemy.currentHP : enemy.hp;
+      
       if (currentEnemyHp > 0) {
         let hpCut = Math.floor(currentEnemyHp / 2);
         let atkCut = Math.floor(enemy.atk / 2);
         
+        // 敵のHPを減算（両方のプロパティを更新）
         if (enemy.currentHP !== undefined) enemy.currentHP -= hpCut;
-        enemy.hp = (enemy.hp || currentEnemyHp) - hpCut;
+        enemy.hp = (enemy.hp !== undefined ? enemy.hp : currentEnemyHp) - hpCut;
         
         enemy.atk -= atkCut;
         totalStolenHp += hpCut;
@@ -1070,12 +1073,13 @@ const specialSkillLogic = {
       }
     });
 
-    // 3. 奪ったHPを「通常通り最大HPを上限として」回復（第3引数はなし、または false）
+    // 3. 奪ったHPを自身に回復（applyHeal または直接加算）
     if (typeof applyHeal === "function") {
       applyHeal(attacker, totalStolenHp);
     } else {
-      // applyHeal がない場合の通常回復処理（maxHP で頭打ちにする）
-      let maxHpVal = attacker.maxHP !== undefined ? attacker.maxHP : attacker.maxHp;
+      // applyHealがない場合直接回復（最大HPで頭打ち）
+      let maxHpVal = attacker.maxHP !== undefined ? attacker.maxHP : (attacker.maxHp || 100);
+      
       if (attacker.currentHP !== undefined) {
         attacker.currentHP = Math.min(maxHpVal, attacker.currentHP + totalStolenHp);
       }
@@ -1084,12 +1088,13 @@ const specialSkillLogic = {
       }
     }
 
-    // 4. 奪ったATKを自身に加算（攻撃力は上限なく伸びます）
+    // 4. 奪ったATKを加算
     attacker.atk += totalStolenAtk;
 
-    // 5. ログ出力とUI更新
-    addLogMessage(`👥 [${pName}] ${attacker.name} の「間柄的存在」！ 敵陣全員の能力を削ぎ落とし、自身のHPを回復＆ATKを${totalStolenAtk}上昇させた！`);
+    // 5. ログ出力
+    addLogMessage(`👥 [${pName}] ${attacker.name} の「間柄的存在」！ 敵陣から能力を削ぎ落とし、自身のHPを回復＆ATKを${totalStolenAtk}上昇させた！`);
 
+    // 6. 【重要】画面UIの再描画を呼び出し
     if (typeof updateBattleUI === "function") {
       updateBattleUI();
     }
