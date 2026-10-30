@@ -164,58 +164,33 @@ const firebaseConfig = {
   measurementId: "G-R8SYD17150"
 };
 
-// 思想家データベース（CARD_DATABASE）の初期化後にドロップダウンを作成
+// 思想家ドロップダウンの初期化関数
 function initDebugMenu() {
   const selectEl = document.getElementById('debug-card-select');
-  if (!selectEl || !window.CARD_DATABASE) return;
+  if (!selectEl) return;
 
-  selectEl.innerHTML = ''; // リセット
-  CARD_DATABASE.forEach(card => {
+  // CARD_DATABASE または window.cardsData などを確認
+  const db = window.CARD_DATABASE || window.cardsData || [];
+
+  if (!db || db.length === 0) {
+    // まだデータがない場合は1秒後に再試行
+    setTimeout(initDebugMenu, 1000);
+    return;
+  }
+
+  selectEl.innerHTML = '';
+  db.forEach(card => {
     const opt = document.createElement('option');
     opt.value = card.id;
-    opt.textContent = `[${card.type || '不明'}] ${card.name}`;
+    opt.textContent = `[${card.type || '未設定'}] ${card.name}`;
     selectEl.appendChild(opt);
   });
 }
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let CARD_DATABASE = [];
-
-
-// 選択したカードを指定した陣営に召喚する関数
-function spawnDebugCard(targetSide) {
-  const selectEl = document.getElementById('debug-card-select');
-  const selectedCardId = selectEl.value;
-  
-  // データベースからカード情報を取得（ディープコピー）
-  const originalCard = CARD_DATABASE.find(c => c.id === selectedCardId);
-  if (!originalCard) return;
-  const newCard = JSON.parse(JSON.stringify(originalCard));
-
-  // ステータスの初期化処理
-  if (typeof initializeCardState === 'function') {
-    initializeCardState(newCard);
-  }
-
-  // 指定した陣営のオブジェクトにセット
-  if (targetSide === 'attacker') {
-    window.testAttacker = newCard;
-    addLogMessage(`🛠️ [デバッグ] 攻撃側に ${newCard.name} を召喚しました。`);
-  } else {
-    window.testDefender = newCard;
-    addLogMessage(`🛠️ [デバッグ] 防御側に ${newCard.name} を召喚しました。`);
-  }
-
-  // 画面表示を更新
-  if (typeof updateBattleUI === "function") {
-    updateBattleUI();
-  }
-}
-
-// cards.json の読み込み完了時（385行目付近の CARD_DATABASE = data; の直後など）に呼び出す
-// initDebugMenu();
+// ページ読み込み完了時に自動実行開始
+document.addEventListener('DOMContentLoaded', () => {
+  initDebugMenu();
+});
 
 // ==========================================
 // 思想家カードゲーム バトル基礎関数群
