@@ -1016,9 +1016,9 @@ const specialSkillLogic = {
   "yoshino_sakuzo": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const isSuccess = Math.random() < 0.5;
     if (isSuccess) {
-      const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga", "natsume_soseki", "nishida_kitaro", "ninomiya_sontoku", "fukuzawa_yukichi", "maruyama_masao", "miyazawa_kenji", "yamaga_soko", "yokoi_shonan", "yoshino_sakuzo"];
       targetObj.cards.forEach(c => {
-        if (c.hp > 0 && japaneseIds.includes(c.id)) {
+        // 生存しており、かつタイプが「日本」の思想家が対象
+        if (c.hp > 0 && c.type === "日本") {
           c.atk = 0;
           c.isStunned = true;
         }
@@ -1029,6 +1029,7 @@ const specialSkillLogic = {
       addLogMessage(`🗳️ [${pName}] ${attacker.name} の「民本主義」！ 倒幕・大正デモクラシーの挫折により、吉野自身が倒れた（HP0）...`);
     }
   },
+
 
   "watsuji": function(pName, attacker, target, actorObj, targetObj, activePt) {
     [actorObj, targetObj].forEach(side => {
