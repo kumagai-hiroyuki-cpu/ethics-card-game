@@ -302,7 +302,7 @@
     "passiveType": "buff",
     "passiveName": "無知の知",
     "passiveDesc": "自分の能力値が相手より低いとき、負うダメージが1/2になる",
-    "synergyTags": "知行合一,ギリシャ師弟,男性,心の師",
+    "synergyTags": "知行合一,ギリシャ師弟,男性,心の師,Sランク",
     "image": "images/socrates.jpg"
   },
   {
@@ -986,7 +986,7 @@
     "passiveType": "heal",
     "passiveName": "永遠平和のために",
     "passiveDesc": "自身が行動するたび、チーム全員のHPを10回復する",
-    "synergyTags": "独断のまどろみ,散歩を忘れる,男性",
+    "synergyTags": "独断のまどろみ,散歩を忘れる,男性,Sランク",
     "image": "images/kant.jpg"
   },
   {
@@ -2534,7 +2534,7 @@
     "passiveType": "special",
     "passiveName": "間柄支配",
     "passiveDesc": "自身はBランク以下のダメージを反射。他日本キャラはCランクダメージを反射",
-    "synergyTags": "京都学派, 男性",
+    "synergyTags": "京都学派, 男性,Sランク",
     "image": "images/watsuji.jpg"
   },
   {
