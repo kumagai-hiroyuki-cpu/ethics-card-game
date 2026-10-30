@@ -242,12 +242,21 @@ function executeInstantKill(target) { // 即死処理
 }
 
 function applyHeal(target, amount, allowOverflow = false) { // 回復処理
-  if (target.currentHP <= 0 && !target.isDead) return 0;
-  target.currentHP += amount;
-  if (!allowOverflow && target.currentHP > target.maxHP) {
-    target.currentHP = target.maxHP;
-  }
+    if (target.currentHP <= 0 && !target.isDead) return 0;
+    
+    // allowOverflow が true なら最大HP(maxHP)も同時に増やす
+    if (allowOverflow) {
+        target.maxHP += amount;
+    }
+    
+    target.currentHP += amount;
+    
+    // allowOverflow が false の時だけ最大HPでストップさせる
+    if (!allowOverflow && target.currentHP > target.maxHP) {
+        target.currentHP = target.maxHP;
+    }
 }
+
 
 function applyBuff(target, statType, amount) { // バフ処理
   if (statType === 'attack') target.attackBuff += amount;
