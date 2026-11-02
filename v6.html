@@ -392,15 +392,16 @@ function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activ
   } else { addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。"); }
 }
 
-fetch('cards.json')
+// カードデータを読み込む処理
+fetch('./cards.json') // ※ファイル名は実際のカードデータ名に合わせてください
   .then(response => response.json())
   .then(data => {
-    data.forEach(card => { if (typeof initializeCardState === 'function') initializeCardState(card); });
-    CARD_DATABASE = data;
-    console.log("思想家データ全 " + CARD_DATABASE.length + " 件の読み込み完了！");
-    initDeckMenu();
+    window.CARD_DATABASE = data; // ここでデータをセットすることでループを抜けられます
   })
-  .catch(error => console.error("cards.json 読み込みエラー:", error));
+  .catch(error => {
+    console.error('カードデータの読み込みに失敗しました:', error);
+  });
+
 
 let myRole = ""; let roomId = ""; let roomRef = null; let gameState = null; let currentLogs = []; let isCpuMode = false;
 
