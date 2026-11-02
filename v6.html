@@ -573,7 +573,9 @@ function updateGameUI() {
   const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2; const enemyPlayerData = myRole === "p1" ? gameState.p2 : gameState.p1;
   if (myPlayerData && myPlayerData.cards) document.getElementById("my-cards").innerHTML = myPlayerData.cards.map(c => renderCard(c, false)).join("");
   if (enemyPlayerData && enemyPlayerData.cards) document.getElementById("enemy-cards").innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
-
+　document.getElementById("action-area").style.display = "block";
+  const waitMsg = document.getElementById("wait-msg");
+  const commandInputs = document.getElementById("command-inputs");
  if (gameState.phase === "waiting_p2") {
     commandInputs.style.display = "none"; waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
    } else if (gameState.phase === "card_reveal") {
