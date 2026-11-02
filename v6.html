@@ -256,6 +256,34 @@ function updateCostUI() {
   }
 }
 
+function updateCostUI() {
+    let currentCost = 0;
+    const maxCost = parseInt(document.getElementById('rule-select').value, 10);
+    
+    // 3つのセレクトボックスから選択されているカードのコストを合計する
+    for (let i = 1; i <= 3; i++) {
+        const selectElement = document.getElementById(`player-card${i}`);
+        if (selectElement && selectElement.value && selectElement.value !== 'random') {
+            const card = window.CARD_DATABASE.find(c => String(c.id) === selectElement.value);
+            if (card) {
+                currentCost += getCardCost(card);
+            }
+        }
+    }
+
+    const disp = document.getElementById('cost-display');
+    const btns = document.querySelectorAll('.start-btn');
+
+    // コスト上限を超えているかどうかで表示とボタンの状態を切り替える
+    if (currentCost > maxCost) {
+        disp.innerHTML = `総コスト: <span style="color:#e74c3c;">${currentCost}</span> / ${maxCost} (制限超過)`;
+        btns.forEach(b => b.disabled = true);
+    } else {
+        disp.innerHTML = `総コスト: <span style="color:#2ecc71;">${currentCost}</span> / ${maxCost}`;
+        btns.forEach(b => b.disabled = false);
+    }
+}
+ 
 function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
   if (numSlots === 0) return [];
   const validCards = availableCards.filter(c => getCardCost(c) <= remainingCost);
