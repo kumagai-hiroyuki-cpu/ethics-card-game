@@ -255,17 +255,14 @@ function updateCostUI() {
   }
 }
 
-// 組み合わせ最適化アルゴリズム（残りコスト枠内で最強のキャラを探索）
 function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
   if (numSlots === 0) return [];
   const validCards = availableCards.filter(c => getCardCost(c) <= remainingCost);
   
-  // 指定数に満たない場合は、コストが低い順に取得（妥協処理）
   if (validCards.length < numSlots) {
     return [...availableCards].sort((a, b) => getCardCost(a) - getCardCost(b)).slice(0, numSlots);
   }
 
-  // 組み合わせ列挙関数（numSlots が最大3なので全探索で一瞬）
   function getCombinations(arr, k) {
     if (k === 1) return arr.map(e => [e]);
     const combos = [];
@@ -277,22 +274,32 @@ function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
   }
 
   const combos = getCombinations(validCards, numSlots);
-  let bestCombo = [];
-  let bestScore = -1;
+  const evaluatedCombos = [];
 
   combos.forEach(combo => {
     const costSum = combo.reduce((sum, c) => sum + getCardCost(c), 0);
     if (costSum <= remainingCost) {
-      // 評価スコア: コスト消費量を最優先。同コストなら「HP+ATK」の高い組み合わせを優先する
+      // 評価スコア: コスト消費量を最優先。同コストなら「HP+ATK」で評価
       const statSum = combo.reduce((sum, c) => sum + (c.maxHp || 100) + (c.atk || 20), 0);
       const score = (costSum * 10000) + statSum; 
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestCombo = combo;
-      }
+      evaluatedCombos.push({ combo, score });
     }
   });
+
+  if (evaluatedCombos.length === 0) {
+    return [...availableCards].sort((a, b) => getCardCost(a) - getCardCost(b)).slice(0, numSlots);
+  }
+
+  // スコア順に降順ソート
+  evaluatedCombos.sort((a, b) => b.score - a.score);
+
+  // 上位候補からランダムに1つ選択（poolSizeの数値を増やすほどランダム性が強くなります）
+  const poolSize = Math.min(5, evaluatedCombos.length);
+  const randomIndex = Math.floor(Math.random() * poolSize);
+
+  return evaluatedCombos[randomIndex].combo;
+}
+
 
   if (bestCombo.length === 0) return [...availableCards].sort((a, b) => getCardCost(a) - getCardCost(b)).slice(0, numSlots);
   return bestCombo;
