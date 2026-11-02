@@ -574,22 +574,21 @@ function updateGameUI() {
   if (myPlayerData && myPlayerData.cards) document.getElementById("my-cards").innerHTML = myPlayerData.cards.map(c => renderCard(c, false)).join("");
   if (enemyPlayerData && enemyPlayerData.cards) document.getElementById("enemy-cards").innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
 
-  document.getElementById("action-area").style.display = "block";
-  const waitMsg = document.getElementById("wait-msg"); const commandInputs = document.getElementById("command-inputs");
-
-  if (gameState.phase === "waiting_p2") {
+ if (gameState.phase === "waiting_p2") {
     commandInputs.style.display = "none"; waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
    } else if (gameState.phase === "card_reveal") {
     commandInputs.style.display = "none"; waitMsg.style.display = "block";
-    const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c.isFlipped).length : 0;
-    if (myFlippedCount < 3) { waitMsg.innerHTML = `<button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px;">🃏 カードをめくる (${myFlippedCount} / 3)</button>`; } 
-    else { waitMsg.innerText = "相手の準備完了を待っています..."; }
+    const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c && c.isFlipped).length : 0;
+    if (myFlippedCount < 3) { 
+      // ★innerHTMLに直接ボタンを書き込む
+      waitMsg.innerHTML = `<button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">🃏 カードをめくる (${myFlippedCount} / 3)</button>`; 
+    } else { 
+      waitMsg.innerHTML = "<span style='color: #f1c40f;'>相手の準備完了を待っています...</span>"; 
+    }
   } else if (gameState.phase === "command_select") {
     commandInputs.style.display = "block"; waitMsg.style.display = "none";
     if (myPlayerData && myPlayerData.cards) updateSelectOptions(myPlayerData.cards);
-  } else if (gameState.phase === "finished") {
-    commandInputs.style.display = "none";
-    if (myRole === "p1" || isCpuMode) { waitMsg.style.display = "none"; } 
+  } else if (gameState.phase === "finished") { 
     else { waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`; }
   }
 
