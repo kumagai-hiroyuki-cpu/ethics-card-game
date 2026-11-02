@@ -545,20 +545,23 @@ function listenToRoom(id) {
             }
         }
         
-        const p1Alive = gameState.p1 && gameState.p1.cards && gameState.p1.cards.some(c => (c.currentHP ?? c.hp) > 0);
-        const p2Alive = gameState.p2 && gameState.p2.cards && gameState.p2.cards.some(c => (c.currentHP ?? c.hp) > 0);
-        
-        if (gameState.phase === "command_select" && (!p1Alive || !p2Alive)) {
-            gameState.phase = "finished";
-            if (!p1Alive && !p2Alive) addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
-            else if (!p2Alive) addLogMessage(isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！");
-            else if (!p1Alive) addLogMessage(isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！");
+        // ★修正： phaseが "command_select" の時だけ勝敗を判定するように保護
+        if (gameState.phase === "command_select") {
+            const p1Alive = gameState.p1 && gameState.p1.cards && gameState.p1.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
+            const p2Alive = gameState.p2 && gameState.p2.cards && gameState.p2.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
             
-            document.getElementById("command-inputs").style.display = "none"; document.getElementById("reset-area").style.display = "block";
-            updateGameUI(); return;
+            if (!p1Alive || !p2Alive) {
+                gameState.phase = "finished";
+                if (!p1Alive && !p2Alive) addLogMessage("🤝 引き分け！両者のチームが全滅しました！");
+                else if (!p2Alive) addLogMessage(isCpuMode ? "🎉 Victory！あなたの勝利です！" : "🎉 プレイヤー1 (P1) の勝利です！");
+                else if (!p1Alive) addLogMessage(isCpuMode ? "💀 Defeat…敗北しました" : "🎉 プレイヤー2 (P2) の勝利です！");
+                
+                document.getElementById("command-inputs").style.display = "none"; document.getElementById("reset-area").style.display = "block";
+                updateGameUI(); return;
+            }
         }
         updateGameUI();
-    }else{ 
+    } else { 
         if (!isCpuMode) { alert("ホストが部屋をリセットしました。タイトル画面に戻ります。"); location.reload(); }
     } 
   });
