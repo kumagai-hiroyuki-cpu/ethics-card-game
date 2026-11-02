@@ -753,14 +753,17 @@ function applyAction(pName, actorObj, targetObj, cmd, oppCmd) {
 function applySynergyBuff(cards) {
   if (!cards || !Array.isArray(cards)) return;
   const tagCounts = {}; const tagToCards = {};
+  
   cards.forEach(card => {
-    if (!card.synergyTags) return;
+    if (!card || !card.synergyTags) return;
     const tags = Array.isArray(card.synergyTags) ? card.synergyTags : card.synergyTags.split(',').map(t => t.trim());
     tags.forEach(tag => { if (tag === "男性" || !tag) return; tagCounts[tag] = (tagCounts[tag] || 0) + 1; if (!tagToCards[tag]) tagToCards[tag] = []; tagToCards[tag].push(card.name); });
   });
+  
   Object.keys(tagCounts).forEach(tag => { if (tagCounts[tag] >= 2) addLogMessage(`🤝 絆効果「${tag}」発動！ (${tagToCards[tag].join(" × ")}) チームのHPが1.2倍に強化！`); });
+  
   cards.forEach(card => {
-    if (!card.synergyTags) return;
+    if (!card || !card.synergyTags) return;
     const tags = Array.isArray(card.synergyTags) ? card.synergyTags : card.synergyTags.split(',').map(t => t.trim());
     if (tags.some(tag => tag !== "男性" && tagCounts[tag] >= 2) && !card._synergyApplied) {
       const boostedHp = Math.round((card.maxHp || card.hp || 60) * 1.2);
