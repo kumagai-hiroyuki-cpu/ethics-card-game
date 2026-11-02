@@ -338,10 +338,13 @@ function generateDeck(selections) {
 }
 
 function prepareCardsForBattle(cards) {
-  return cards.map(c => ({
-    ...c, hp: c.hp ?? c.maxHp ?? 100, currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-    maxHp: c.maxHp ?? 100, atk: c.atk ?? 20, baseAtk: c.baseAtk ?? c.atk ?? 20, skillUsed: false, isFlipped: false
-  }));
+  return cards.map(c => {
+    if (!c) return null; // カードが空枠の場合はスキップする
+    return {
+      ...c, hp: c.hp ?? c.maxHp ?? 100, currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
+      maxHp: c.maxHp ?? 100, atk: c.atk ?? 20, baseAtk: c.baseAtk ?? c.atk ?? 20, skillUsed: false, isFlipped: false
+    };
+  });
 }
 
 // ==========================================
