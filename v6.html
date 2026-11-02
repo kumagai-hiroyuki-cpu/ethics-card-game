@@ -187,6 +187,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+let CARD_DATABASE = []; // 
 
 // ==========================================
 // コスト・編成システム & 最適化エンジン
@@ -195,7 +196,7 @@ const MIN_COST_PER_SLOT = 2; // ランダム枠1つにつき最低消費する�
 
 function getCurrentMaxCost() {
   const selectEl = document.getElementById('cost-limit-select');
-  return selectEl ? parseInt(selectEl.value) : 10;
+  return selectEl ? parseInt(selectEl.value) : 12;
 }
 
 function getCardCost(card) {
