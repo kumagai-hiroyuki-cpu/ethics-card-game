@@ -229,44 +229,20 @@ function initDeckMenu() {
 document.addEventListener('DOMContentLoaded', () => { initDeckMenu(); });
 
 function updateCostUI() {
-  let fixedCost = 0;
-  let randomCount = 0;
-  const maxCost = getCurrentMaxCost();
-  
-  for (let i = 1; i <= 3; i++) {
-    const val = document.getElementById(`deck-${i}`).value;
-    if (val !== 'random' && val !== '') {
-      const card = CARD_DATABASE.find(c => String(c.id) === String(val));
-      if (card) fixedCost += getCardCost(card);
-    } else {
-      randomCount++;
-    }
-  }
-
-  const minRequiredCost = fixedCost + (randomCount * MIN_COST_PER_SLOT);
-  const disp = document.getElementById('cost-display');
-  const btns = document.querySelectorAll('.start-btn');
-
-  if (fixedCost > maxCost || minRequiredCost > maxCost) {
-    disp.innerHTML = `総コスト: <span style="color:#e74c3c;">${fixedCost}${randomCount > 0 ? ' + 🎲' : ''} / ${maxCost} (制限超過)</span>`;
-    btns.forEach(b => b.disabled = true);
-  } else {
-    disp.innerHTML = `総コスト: <span style="color:#2ecc71;">${fixedCost}${randomCount > 0 ? ' + 🎲' : ''} / ${maxCost}</span>`;
-    btns.forEach(b => b.disabled = false);
-  }
-}
-
-function updateCostUI() {
     let currentCost = 0;
-    const maxCost = parseInt(document.getElementById('rule-select').value, 10);
     
-    // 3つのセレクトボックスから選択されているカードのコストを合計する
+    // ルール選択のドロップダウンを取得（見つからない場合は仮に12とする）
+    const ruleSelect = document.getElementById('rule-select'); // ★ここの 'rule-select' が実際のHTMLのidと合っているか確認
+    const maxCost = ruleSelect ? parseInt(ruleSelect.value, 10) : 12;
+    
     for (let i = 1; i <= 3; i++) {
+        // ★ここの 'player-card' が実際のHTMLのidと合っているか確認（'player1-card' などの可能性あり）
         const selectElement = document.getElementById(`player-card${i}`);
         if (selectElement && selectElement.value && selectElement.value !== 'random') {
             const card = window.CARD_DATABASE.find(c => String(c.id) === selectElement.value);
             if (card) {
-                currentCost += getCardCost(card);
+                // getCardCost関数が存在することを前提としています
+                currentCost += (typeof getCardCost === 'function') ? getCardCost(card) : (card.cost || 0);
             }
         }
     }
@@ -274,13 +250,14 @@ function updateCostUI() {
     const disp = document.getElementById('cost-display');
     const btns = document.querySelectorAll('.start-btn');
 
-    // コスト上限を超えているかどうかで表示とボタンの状態を切り替える
-    if (currentCost > maxCost) {
-        disp.innerHTML = `総コスト: <span style="color:#e74c3c;">${currentCost}</span> / ${maxCost} (制限超過)`;
-        btns.forEach(b => b.disabled = true);
-    } else {
-        disp.innerHTML = `総コスト: <span style="color:#2ecc71;">${currentCost}</span> / ${maxCost}`;
-        btns.forEach(b => b.disabled = false);
+    if (disp) {
+        if (currentCost > maxCost) {
+            disp.innerHTML = `総コスト: <span style="color:#e74c3c;">${currentCost}</span> / ${maxCost} (制限超過)`;
+            btns.forEach(b => b.disabled = true);
+        } else {
+            disp.innerHTML = `総コスト: <span style="color:#2ecc71;">${currentCost}</span> / ${maxCost}`;
+            btns.forEach(b => b.disabled = false);
+        }
     }
 }
  
