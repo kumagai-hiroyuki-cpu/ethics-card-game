@@ -78,7 +78,7 @@
   <div class="rule-selector">
     <label style="color:#f1c40f; font-weight:bold; font-size: 0.9em;">⚖️ バトルルール (コスト上限): </label>
     <select id="cost-limit-select" onchange="updateCostUI()" style="padding: 6px; border-radius: 4px; font-weight: bold;">
-      <option value="10">公式ルール (コスト上限: 12)</option>
+      <option value="12">公式ルール (コスト上限: 12)</option>
       <option value="15">最大値制限 (コスト上限: 15) ※Sランク3体可能</option>
     </select>
   </div>
@@ -187,19 +187,15 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-let CARD_DATABASE = []; // 
-
-// ==========================================
-// コスト・編成システム & 最適化エンジン
-// ==========================================
-const MIN_COST_PER_SLOT = 2; // ランダム枠1つにつき最低消費する想定コスト（Rank C相当）
+let CARD_DATABASE = [];
 
 function getCurrentMaxCost() {
   const selectEl = document.getElementById('cost-limit-select');
-  return selectEl ? parseInt(selectEl.value) : 12;
+  return selectEl ? parseInt(selectEl.value, 10) : 12;
 }
 
 function getCardCost(card) {
+  if (!card) return 0;
   if (card.cost) return card.cost;
   if (card.rank === 'S') return 5;
   if (card.rank === 'A') return 4;
@@ -209,10 +205,10 @@ function getCardCost(card) {
 }
 
 function initDeckMenu() {
-  const db = window.CARD_DATABASE || [];
-  if (db.length === 0) { setTimeout(initDeckMenu, 1000); return; }
+  const cardDb = window.CARD_DATABASE || [];
+  if (cardDb.length === 0) { setTimeout(initDeckMenu, 500); return; }
   
-  const sortedDb = [...db].sort((a, b) => getCardCost(b) - getCardCost(a));
+  const sortedDb = [...cardDb].sort((a, b) => getCardCost(b) - getCardCost(a));
   for (let i = 1; i <= 3; i++) {
     const el = document.getElementById(`deck-${i}`);
     if (!el) continue;
@@ -230,19 +226,15 @@ document.addEventListener('DOMContentLoaded', () => { initDeckMenu(); });
 
 function updateCostUI() {
     let currentCost = 0;
-    
-    // ルール選択のドロップダウンを取得（見つからない場合は仮に12とする）
-    const ruleSelect = document.getElementById('rule-select'); // ★ここの 'rule-select' が実際のHTMLのidと合っているか確認
-    const maxCost = ruleSelect ? parseInt(ruleSelect.value, 10) : 12;
+    const maxCost = getCurrentMaxCost();
+    const cardDb = window.CARD_DATABASE || [];
     
     for (let i = 1; i <= 3; i++) {
-        // ★ここの 'player-card' が実際のHTMLのidと合っているか確認（'player1-card' などの可能性あり）
-        const selectElement = document.getElementById(`player-card${i}`);
+        const selectElement = document.getElementById(`deck-${i}`);
         if (selectElement && selectElement.value && selectElement.value !== 'random') {
-            const card = window.CARD_DATABASE.find(c => String(c.id) === selectElement.value);
+            const card = cardDb.find(c => String(c.id) === String(selectElement.value));
             if (card) {
-                // getCardCost関数が存在することを前提としています
-                currentCost += (typeof getCardCost === 'function') ? getCardCost(card) : (card.cost || 0);
+                currentCost += getCardCost(card);
             }
         }
     }
@@ -285,7 +277,6 @@ function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
   combos.forEach(combo => {
     const costSum = combo.reduce((sum, c) => sum + getCardCost(c), 0);
     if (costSum <= remainingCost) {
-      // 評価スコア: コスト消費量を最優先。同コストなら「HP+ATK」で評価
       const statSum = combo.reduce((sum, c) => sum + (c.maxHp || 100) + (c.atk || 20), 0);
       const score = (costSum * 10000) + statSum; 
       evaluatedCombos.push({ combo, score });
@@ -296,10 +287,8 @@ function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
     return [...availableCards].sort((a, b) => getCardCost(a) - getCardCost(b)).slice(0, numSlots);
   }
 
-  // スコア順に降順ソート
   evaluatedCombos.sort((a, b) => b.score - a.score);
 
-  // 上位候補からランダムに1つ選択（poolSizeの数値を増やすほどランダム性が強くなります）
   const poolSize = Math.min(5, evaluatedCombos.length);
   const randomIndex = Math.floor(Math.random() * poolSize);
 
@@ -309,12 +298,11 @@ function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
 function generateDeck(selections) {
   let deck = [null, null, null];
   let currentCost = 0;
-  const db = [...CARD_DATABASE];
+  const cardDb = [...(window.CARD_DATABASE || [])];
 
-  // 1. 指定されたカードをセット
   for (let i = 0; i < 3; i++) {
     if (selections[i] && selections[i] !== 'random') {
-      const c = db.find(card => String(card.id) === String(selections[i]));
+      const c = cardDb.find(card => String(card.id) === String(selections[i]));
       if (c) {
         deck[i] = JSON.parse(JSON.stringify(c));
         currentCost += getCardCost(c);
@@ -322,16 +310,12 @@ function generateDeck(selections) {
     }
   }
 
-  // 2. 空き枠の最適化計算
   const emptyIndices = [];
   deck.forEach((c, i) => { if (!c) emptyIndices.push(i); });
   
   if (emptyIndices.length > 0) {
     const maxAllowed = getCurrentMaxCost() - currentCost;
-    // 重複を避けるため、既にデッキにいるカードを除外
-    const availableCards = db.filter(c => !deck.some(d => d && d.id === c.id));
-    
-    // 最適化エンジンで最良の組み合わせを取得
+    const availableCards = cardDb.filter(c => !deck.some(d => d && d.id === c.id));
     const bestCards = getOptimizedRandomCards(availableCards, emptyIndices.length, maxAllowed);
     
     bestCards.forEach((c, idx) => {
@@ -344,19 +328,26 @@ function generateDeck(selections) {
 
 function prepareCardsForBattle(cards) {
   return cards.map(c => {
-    if (!c) return null; // カードが空枠の場合はスキップする
+    if (!c) return null;
+    const baseHp = c.maxHp || c.hp || 100;
+    const baseAtk = c.atk || c.baseAtk || 20;
     return {
-      ...c, hp: c.hp ?? c.maxHp ?? 100, currentHP: c.currentHP ?? c.hp ?? c.maxHp ?? 100,
-      maxHp: c.maxHp ?? 100, atk: c.atk ?? 20, baseAtk: c.baseAtk ?? c.atk ?? 20, skillUsed: false, isFlipped: false
+      ...c, 
+      hp: baseHp, 
+      currentHP: baseHp,
+      maxHp: baseHp, 
+      atk: baseAtk, 
+      baseAtk: baseAtk, 
+      skillUsed: false, 
+      isFlipped: false
     };
   });
 }
 
-// ==========================================
-// 思想家カードゲーム バトル基礎関数群
-// ==========================================
 function initializeCardState(card) {
-  card.currentHP = card.maxHP || card.hp; card.isDead = false;
+  if (!card) return;
+  card.currentHP = card.maxHp || card.hp || 100; 
+  card.isDead = false;
   card.isInvincible = false; card.evadeRate = 0; card.damageReduction = 0; card.nullifyRank = null;
   card.hasGuts = false; card.hasRevive = false; card.coverTarget = null; card.regenAmount = 0;
   card.stunTurns = 0; card.silenceTurns = 0; card.attackBuff = 0; card.defenseBuff = 0;
@@ -395,16 +386,15 @@ function executeSpecialSkill(pName, attacker, target, actorObj, targetObj, activ
   } else { addLogMessage("⚠️ [" + pName + "] " + attacker.name + " の特殊スキルは未実装です。"); }
 }
 
-// カードデータを読み込む処理
-fetch('./cards.json') // ※ファイル名は実際のカードデータ名に合わせてください
+fetch('./cards.json')
   .then(response => response.json())
   .then(data => {
-    window.CARD_DATABASE = data; // ここでデータをセットすることでループを抜けられます
+    window.CARD_DATABASE = data;
+    initDeckMenu();
   })
   .catch(error => {
     console.error('カードデータの読み込みに失敗しました:', error);
   });
-
 
 let myRole = ""; let roomId = ""; let roomRef = null; let gameState = null; let currentLogs = []; let isCpuMode = false;
 
@@ -428,7 +418,6 @@ function resetGame() {
   initDeckMenu();
 }
 
-// === CPU対戦開始 ===
 function startCpuBattle() {
   isCpuMode = true; myRole = "p1"; window.currentLogs = [];
   const mySelections = [ document.getElementById('deck-1').value, document.getElementById('deck-2').value, document.getElementById('deck-3').value ];
@@ -442,14 +431,13 @@ function startCpuBattle() {
   };
 
   applySynergyBuff(gameState.p1.cards); applySynergyBuff(gameState.p2.cards);
-  document.getElementById("setup-area").style.display = "none";
+  document.getElementById("setup-area").style.display = "none"; 
   document.getElementById("game-area").style.display = "block";
-  document.getElementById("action-area").style.display = "block"; // ★操作エリアを確実に表示
+  document.getElementById("action-area").style.display = "block";
 
   updateGameUI();
   if (typeof triggerBattleStartPassives === "function") triggerBattleStartPassives();
 
-  // ★めくるボタンがある操作エリアまで自動スクロール
   document.getElementById("action-area").scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -467,7 +455,7 @@ function joinRoom(role) {
 
   if (role === 'p1') {
     const p1Cards = generateDeck(mySelections);
-    const p2Cards = generateDeck(['random', 'random', 'random']); // 仮置き
+    const p2Cards = generateDeck(['random', 'random', 'random']);
 
     const newGameState = {
       phase: "waiting_p2", turnCount: 1, p1: { name: "P1(あなた)", cards: p1Cards, cmd: null }, p2: { name: "P2(待機中)", cards: p2Cards, cmd: null },
@@ -511,18 +499,19 @@ function revealNextCard() {
   if (!myData || !myData.cards) return;
 
   const unrevealedCard = myData.cards.find(c => c && !c.isFlipped);
-    if (unrevealedCard) unrevealedCard.isFlipped = true;
-    const allMyFlipped = myData.cards.every(c => c && c.isFlipped);
+  if (unrevealedCard) unrevealedCard.isFlipped = true;
+  const allMyFlipped = myData.cards.every(c => c && c.isFlipped);
 
   if (isCpuMode) {
     if (allMyFlipped) {
-      gameState.p2.cards.forEach(c => c.isFlipped = true); gameState.phase = "command_select";
+      gameState.p2.cards.forEach(c => { if(c) c.isFlipped = true; }); 
+      gameState.phase = "command_select";
       addLogMessage("⚔️ すべての思想家が登場しました！コマンドを選択してください。");
     }
     updateGameUI();
   } else {
     const enemyRole = myRole === "p1" ? "p2" : "p1"; const enemyData = gameState[enemyRole];
-    const allEnemyFlipped = enemyData && enemyData.cards ? enemyData.cards.every(c => c.isFlipped) : false;
+    const allEnemyFlipped = enemyData && enemyData.cards ? enemyData.cards.every(c => c && c.isFlipped) : false;
     let updates = {}; updates[`rooms/${roomId}/${myRole}/cards`] = sanitizeObject(myData.cards);
 
     if (allMyFlipped && allEnemyFlipped) {
@@ -548,7 +537,6 @@ function listenToRoom(id) {
             }
         }
         
-        // ★修正： phaseが "command_select" の時だけ勝敗を判定するように保護
         if (gameState.phase === "command_select") {
             const p1Alive = gameState.p1 && gameState.p1.cards && gameState.p1.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
             const p2Alive = gameState.p2 && gameState.p2.cards && gameState.p2.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
@@ -576,19 +564,22 @@ function updateGameUI() {
 
   if (gameState.p1) document.getElementById("my-role").textContent = myRole === "p1" ? (gameState.p1.name || "あなた") : (gameState.p2.name || "あなた");
 
-  const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2; const enemyPlayerData = myRole === "p1" ? gameState.p2 : gameState.p1;
+  const myPlayerData = myRole === "p1" ? gameState.p1 : gameState.p2; 
+  const enemyPlayerData = myRole === "p1" ? gameState.p2 : gameState.p1;
+  
   if (myPlayerData && myPlayerData.cards) document.getElementById("my-cards").innerHTML = myPlayerData.cards.map(c => renderCard(c, false)).join("");
   if (enemyPlayerData && enemyPlayerData.cards) document.getElementById("enemy-cards").innerHTML = enemyPlayerData.cards.map(c => renderCard(c, true)).join("");
-　document.getElementById("action-area").style.display = "block";
+  
+  document.getElementById("action-area").style.display = "block";
   const waitMsg = document.getElementById("wait-msg");
   const commandInputs = document.getElementById("command-inputs");
- if (gameState.phase === "waiting_p2") {
+  
+  if (gameState.phase === "waiting_p2") {
     commandInputs.style.display = "none"; waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 16px; color: #f1c40f;">⏳ 相手(P2)が部屋に入るのを待っています...<br><small>(部屋ID: ${roomId})</small></div>`;
-   } else if (gameState.phase === "card_reveal") {
+  } else if (gameState.phase === "card_reveal") {
     commandInputs.style.display = "none"; waitMsg.style.display = "block";
     const myFlippedCount = myPlayerData && myPlayerData.cards ? myPlayerData.cards.filter(c => c && c.isFlipped).length : 0;
     if (myFlippedCount < 3) { 
-      // ★innerHTMLに直接ボタンを書き込む
       waitMsg.innerHTML = `<button class="cpu-btn" onclick="revealNextCard()" style="font-size: 16px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">🃏 カードをめくる (${myFlippedCount} / 3)</button>`; 
     } else { 
       waitMsg.innerHTML = "<span style='color: #f1c40f;'>相手の準備完了を待っています...</span>"; 
@@ -596,7 +587,7 @@ function updateGameUI() {
   } else if (gameState.phase === "command_select") {
     commandInputs.style.display = "block"; waitMsg.style.display = "none";
     if (myPlayerData && myPlayerData.cards) updateSelectOptions(myPlayerData.cards);
- } else if (gameState.phase === "finished") {
+  } else if (gameState.phase === "finished") {
     commandInputs.style.display = "none";
     if (myRole === "p1" || isCpuMode) { waitMsg.style.display = "none"; } 
     else { waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`; }
@@ -614,14 +605,16 @@ function triggerBattleStartPassives() {
   if (!gameState) return;
   ["p1", "p2"].forEach(role => {
     const playerObj = gameState[role]; const enemyObj = gameState[role === "p1" ? "p2" : "p1"];
-  if (playerObj && playerObj.cards) { playerObj.cards.forEach(card => { if (card && card.hp > 0 && typeof triggerPassive === "function") triggerPassive("onBattleStart", card, playerObj, enemyObj); }); }
+    if (playerObj && playerObj.cards) { playerObj.cards.forEach(card => { if (card && (card.currentHP ?? card.hp ?? 0) > 0 && typeof triggerPassive === "function") triggerPassive("onBattleStart", card, playerObj, enemyObj); }); }
   });
 }
 
 function renderCard(c, isEnemy) {
   if (!c || !c.isFlipped) { return `<div class="card-container card-back" style="min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #2a2a2a; border: 2px solid #555; border-radius: 6px;"><div style="font-size: 36px; color: #e74c3c; font-weight: bold;">?</div></div>`; }
-  const hpPercent = Math.max(0, (c.currentHP ?? c.hp ?? 100) / (c.maxHp ?? 100) * 100);
-  const isDefeated = (c.currentHP ?? c.hp) <= 0;
+  const curHp = c.currentHP ?? c.hp ?? c.maxHp ?? 100;
+  const maxHp = c.maxHp ?? 100;
+  const hpPercent = Math.max(0, (curHp / maxHp) * 100);
+  const isDefeated = curHp <= 0;
   let rawImg = c.image || c.icon || c.img || '';
   if (rawImg && !rawImg.startsWith('http') && !rawImg.startsWith('images/')) rawImg = `images/${rawImg}`;
 
@@ -633,7 +626,7 @@ function renderCard(c, isEnemy) {
         <div style="background: #444; height: 8px; border-radius: 4px; overflow: hidden; margin: 0 auto 2px auto; width: 90%;">
           <div style="background: #2ecc71; width: ${hpPercent}%; height: 100%;"></div>
         </div>
-        <div style="font-size: 0.75em; color: #fff; font-weight: bold;">${c.currentHP ?? c.hp} / ${c.maxHp ?? 100}</div>
+        <div style="font-size: 0.75em; color: #fff; font-weight: bold;">${curHp} / ${maxHp}</div>
       </div>
     </div>`;
 }
@@ -641,7 +634,11 @@ function renderCard(c, isEnemy) {
 function updateSelectOptions(myCards) {
   const atkSelect = document.getElementById("attacker-select"); if (!atkSelect || !myCards) return;
   const currentAtkVal = atkSelect.value;
-  atkSelect.innerHTML = myCards.map((c, i) => `<option value="${i}" ${c.hp === 0 ? 'disabled':''}>${c.name} (ATK:${c.atk}) ${c.skillUsed ? '[スキル済]':''}</option>`).join('');
+  atkSelect.innerHTML = myCards.map((c, i) => {
+    if (!c) return '';
+    const curHp = c.currentHP ?? c.hp ?? 0;
+    return `<option value="${i}" ${curHp <= 0 ? 'disabled':''}>${c.name} (ATK:${c.atk}) ${c.skillUsed ? '[スキル済]':''}</option>`;
+  }).join('');
   if (currentAtkVal !== "") atkSelect.value = currentAtkVal;
   updateSkillDisplay();
 }
@@ -674,7 +671,7 @@ function submitCommand(type) {
 }
 
 function generateCpuCommand() {
-  const aliveIndices = gameState.p2.cards.map((c, i) => ({ ...c, idx: i })).filter(c => c.hp > 0);
+  const aliveIndices = gameState.p2.cards.map((c, i) => ({ ...c, idx: i })).filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
   if (aliveIndices.length === 0) return;
   const chosen = aliveIndices[Math.floor(Math.random() * aliveIndices.length)];
   let type = "attack";
@@ -683,7 +680,7 @@ function generateCpuCommand() {
 }
 
 function getRandomTarget(targetCards) {
-  const aliveTargets = targetCards.map((c, i) => ({ ...c, originalIdx: i })).filter(c => c.hp > 0);
+  const aliveTargets = targetCards.map((c, i) => ({ ...c, originalIdx: i })).filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
   return aliveTargets.length === 0 ? null : aliveTargets[Math.floor(Math.random() * aliveTargets.length)].originalIdx;
 }
 
@@ -704,7 +701,7 @@ function processBattlePhase() {
   [gameState.p1, gameState.p2].forEach(pObj => { if (pObj && pObj.cards) { const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1; pObj.cards.forEach(card => { if (card && ((card.currentHP ?? card.hp ?? 0) > 0) && typeof triggerPassive === "function") triggerPassive("onTurnEnd", card, pObj, enemyObj); }); } });
 
   gameState.p1.cmd = null; gameState.p2.cmd = null;
-　 const p1Alive = gameState.p1.cards.some(c => c && (c.currentHP ?? c.hp ?? c.maxHp ?? 0) > 0);
+  const p1Alive = gameState.p1.cards.some(c => c && (c.currentHP ?? c.hp ?? c.maxHp ?? 0) > 0);
   const p2Alive = gameState.p2.cards.some(c => c && (c.currentHP ?? c.hp ?? c.maxHp ?? 0) > 0);
 
   if (!p1Alive || !p2Alive) {
@@ -802,3 +799,4 @@ function closeModal() { document.getElementById("card-modal").style.display = "n
 </script>
 </body>
 </html>
+  
