@@ -301,11 +301,6 @@ function getOptimizedRandomCards(availableCards, numSlots, remainingCost) {
   return evaluatedCombos[randomIndex].combo;
 }
 
-
-  if (bestCombo.length === 0) return [...availableCards].sort((a, b) => getCardCost(a) - getCardCost(b)).slice(0, numSlots);
-  return bestCombo;
-}
-
 function generateDeck(selections) {
   let deck = [null, null, null];
   let currentCost = 0;
