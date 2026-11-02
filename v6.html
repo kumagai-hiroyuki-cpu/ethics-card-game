@@ -588,7 +588,9 @@ function updateGameUI() {
   } else if (gameState.phase === "command_select") {
     commandInputs.style.display = "block"; waitMsg.style.display = "none";
     if (myPlayerData && myPlayerData.cards) updateSelectOptions(myPlayerData.cards);
-  } else if (gameState.phase === "finished") { 
+ } else if (gameState.phase === "finished") {
+    commandInputs.style.display = "none";
+    if (myRole === "p1" || isCpuMode) { waitMsg.style.display = "none"; } 
     else { waitMsg.style.display = "block"; waitMsg.innerHTML = `<div style="font-size: 15px; color: #f1c40f;">⏳ P1が部屋をリセットするのを待っています...</div>`; }
   }
 
