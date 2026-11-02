@@ -507,9 +507,9 @@ function revealNextCard() {
   const myData = gameState[myRole];
   if (!myData || !myData.cards) return;
 
-  const unrevealedCard = myData.cards.find(c => !c.isFlipped);
-  if (unrevealedCard) unrevealedCard.isFlipped = true;
-  const allMyFlipped = myData.cards.every(c => c.isFlipped);
+  const unrevealedCard = myData.cards.find(c => c && !c.isFlipped);
+    if (unrevealedCard) unrevealedCard.isFlipped = true;
+    const allMyFlipped = myData.cards.every(c => c && c.isFlipped);
 
   if (isCpuMode) {
     if (allMyFlipped) {
@@ -608,7 +608,7 @@ function triggerBattleStartPassives() {
   if (!gameState) return;
   ["p1", "p2"].forEach(role => {
     const playerObj = gameState[role]; const enemyObj = gameState[role === "p1" ? "p2" : "p1"];
-    if (playerObj && playerObj.cards) { playerObj.cards.forEach(card => { if (card.hp > 0 && typeof triggerPassive === "function") triggerPassive("onBattleStart", card, playerObj, enemyObj); }); }
+  if (playerObj && playerObj.cards) { playerObj.cards.forEach(card => { if (card && card.hp > 0 && typeof triggerPassive === "function") triggerPassive("onBattleStart", card, playerObj, enemyObj); }); }
   });
 }
 
