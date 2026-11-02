@@ -692,14 +692,14 @@ function processBattlePhase() {
   const p1Name = isCpuMode ? "あなた" : "P1"; const p2Name = isCpuMode ? "CPU" : "P2";
   addLogMessage("=== 第 " + gameState.turnCount + " ターン 結果発表！ ===");
   
-  [gameState.p1, gameState.p2].forEach(pObj => { if (pObj && pObj.cards) { pObj.cards.forEach(card => { if ((card.currentHP ?? card.hp ?? 0) > 0 && typeof triggerPassive === "function") triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1); }); } });
+  [gameState.p1, gameState.p2].forEach(pObj => { if (pObj && pObj.cards) { pObj.cards.forEach(card => { if (card && ((card.currentHP ?? card.hp ?? 0) > 0) && typeof triggerPassive === "function") triggerPassive("onTurnStart", card, pObj, pObj === gameState.p1 ? gameState.p2 : gameState.p1); }); } });
   applyAction(p1Name, gameState.p1, gameState.p2, gameState.p1.cmd, gameState.p2.cmd);
   applyAction(p2Name, gameState.p2, gameState.p1, gameState.p2.cmd, gameState.p1.cmd);
-  [gameState.p1, gameState.p2].forEach(pObj => { if (pObj && pObj.cards) { const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1; pObj.cards.forEach(card => { if ((card.currentHP ?? card.hp ?? 0) > 0 && typeof triggerPassive === "function") triggerPassive("onTurnEnd", card, pObj, enemyObj); }); } });
+  [gameState.p1, gameState.p2].forEach(pObj => { if (pObj && pObj.cards) { const enemyObj = pObj === gameState.p1 ? gameState.p2 : gameState.p1; pObj.cards.forEach(card => { if (card && ((card.currentHP ?? card.hp ?? 0) > 0) && typeof triggerPassive === "function") triggerPassive("onTurnEnd", card, pObj, enemyObj); }); } });
 
   gameState.p1.cmd = null; gameState.p2.cmd = null;
-  const p1Alive = gameState.p1.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
-  const p2Alive = gameState.p2.cards.some(c => (c.currentHP ?? c.hp ?? 0) > 0);
+  const p1Alive = gameState.p1.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
+  const p2Alive = gameState.p2.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
 
   if (!p1Alive || !p2Alive) {
     gameState.phase = "finished";
