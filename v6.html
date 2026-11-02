@@ -433,10 +433,7 @@ function startCpuBattle() {
   isCpuMode = true; myRole = "p1"; window.currentLogs = [];
   const mySelections = [ document.getElementById('deck-1').value, document.getElementById('deck-2').value, document.getElementById('deck-3').value ];
 
-  // ★ プレイヤーのデッキ生成（最適化計算入り）
   const p1Cards = generateDeck(mySelections);
-  
-  // ★ CPUのデッキ生成（完全ランダム最適化＝ルール上限内で最強の組み合わせを探す）
   const p2Cards = generateDeck(['random', 'random', 'random']); 
 
   gameState = {
@@ -445,9 +442,15 @@ function startCpuBattle() {
   };
 
   applySynergyBuff(gameState.p1.cards); applySynergyBuff(gameState.p2.cards);
-  document.getElementById("setup-area").style.display = "none"; document.getElementById("game-area").style.display = "block";
+  document.getElementById("setup-area").style.display = "none";
+  document.getElementById("game-area").style.display = "block";
+  document.getElementById("action-area").style.display = "block"; // ★操作エリアを確実に表示
+
   updateGameUI();
   if (typeof triggerBattleStartPassives === "function") triggerBattleStartPassives();
+
+  // ★めくるボタンがある操作エリアまで自動スクロール
+  document.getElementById("action-area").scrollIntoView({ behavior: 'smooth' });
 }
 
 function joinRoom(role) {
