@@ -878,30 +878,48 @@ const specialSkillLogic = {
   },
 
 
-  "beauvoir": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "beauvoir": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const maleIds = ["socrates", "platon", "aristoteles", "kant", "hegel", "nietzsche", "descartes", "hobbes", "marx", "freud"];
     let affected = 0;
-    targetObj.cards.forEach(c => {
-      if (c.hp > 0 && maleIds.includes(c.id)) {
-        c.atk = Math.max(0, c.atk - 10);
-        c.hp = Math.max(0, c.hp - 10);
-        affected++;
-      }
-    });
+    const enemyPName = pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1");
+
+    if (targetObj && targetObj.cards) {
+      targetObj.cards.forEach(c => {
+        if (c && (c.currentHP ?? c.hp ?? 0) > 0 && maleIds.includes(c.id)) {
+          c.atk = Math.max(0, (c.atk || 0) - 10);
+          if (!attacker.type) attacker.type = "西洋";
+          if (!c.type) c.type = "西洋";
+
+          // 修正: executeDamage でHP減少処理とUI更新を連動
+          executeDamage(enemyPName, attacker, c, actorObj, targetObj, 10, true);
+          affected++;
+        }
+      });
+    }
     addLogMessage(`♀️ [${pName}] ${attacker.name} の「女性解放運動」！ 敵陣の男性思想家 ${affected} 体の偏見を打破し、攻撃力とHPを10低下させた！`);
   },
 
   "hobbes": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 15;
-    [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        if (c.hp > 0) {
-          c.hp -= dmg;
-          if (c.hp < 0) c.hp = 0;
-        }
-      });
+    const allSides = [
+      { sideObj: actorObj, sidePName: pName },
+      { sideObj: targetObj, sidePName: pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1") }
+    ];
+
+    allSides.forEach(({ sideObj, sidePName }) => {
+      if (sideObj && sideObj.cards) {
+        sideObj.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0) {
+            if (!attacker.type) attacker.type = "西洋";
+            if (!c.type) c.type = "西洋";
+
+            // 修正: 敵味方全員へのダメージを executeDamage で安全に処理
+            executeDamage(sidePName, attacker, c, actorObj, sideObj, dmg, true);
+          }
+        });
+      }
     });
-    addLogMessage(`⚔️ [${pName}]${attacker.name} の「万人の万人に対する闘争」！ 自然状態の混乱が発生し、敵味方全員が ${dmg} ダメージを受けた！`);
+    addLogMessage(`⚔️ [${pName}] ${attacker.name} の「万人の万人に対する闘争」！ 自然状態の混乱が発生し、敵味方全員が ${dmg} ダメージを受けた！`);
   },
 
   "marx": function(pName, attacker, target, actorObj, targetObj, activePt) {
@@ -1042,77 +1060,114 @@ const specialSkillLogic = {
     addLogMessage(`🔔 [${pName}] ${attacker.name} の「一切衆生悉有仏性」！ 敵全体に ${dmg} ダメージを与え、万物が仏性を持つ慈悲の導きを付与した！`);
   },
 
-  "sakaguchi_ango": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "sakaguchi_ango": function(pName, attacker, target, actorObj, targetObj, activePt) {
     [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        c.atkBuff = false;
-        c.defenseBuff = false;
-        c.nullifyCount = 0;
-        c.isStunned = false;
-      });
+      if (side && side.cards) {
+        side.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0) {
+            c.atkBuff = false;
+            c.defenseBuff = false;
+            c.nullifyCount = 0;
+            c.isStunned = false;
+          }
+        });
+      }
     });
-    addLogMessage(`🍷 [${pName}]${attacker.name} の「堕落論」！ 生きよ、堕ちよ！ 敵味方すべてのバフ・デバフがリセットされた！`);
+    addLogMessage(`🍷 [${pName}] ${attacker.name} の「堕落論」！ 生きよ、堕ちよ！ 敵味方すべてのバフ・デバフがリセットされた！`);
   },
 
   "sakuma_shozan": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.atk += 15;
+    attacker.atk = (attacker.atk || 0) + 15;
     const dmg = attacker.atk;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    addLogMessage(`⚙️ [${pName}]${attacker.name} の「和魂洋才」！ 東洋の精神と西洋の技術を融合し、${target.name} に ${dmg} ダメージ！`);
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "和";
+      if (!target.type) target.type = "西洋";
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
+    addLogMessage(`⚙️ [${pName}] ${attacker.name} の「和魂洋才」！ 東洋の精神と西洋の技術を融合し、${target ? target.name : ''} に ${dmg} ダメージ！`);
   },
 
   "shotoku_taishi": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-    addLogMessage(`📜 [${pName}]${attacker.name} の「憲法十七条」！ 「以和為貴」の教えにより、次の攻撃を1回完全回避する！`);
+    if (attacker) {
+      attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
+      addLogMessage(`📜 [${pName}] ${attacker.name} の「憲法十七条」！ 「以和為貴」の教えにより、次の攻撃を1回完全回避する！`);
+    }
   },
 
- "takano_choei": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.nullifyCount = (attacker.nullifyCount || 0) + 2;
-    addLogMessage(`🕯️ [${pName}] ${attacker.name} の「戊戌夢物語」！ 卓越した脱獄の知恵により身を隠し、敵の攻撃を2回まで絶対回避！`);
+  "takano_choei": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    if (attacker) {
+      attacker.nullifyCount = (attacker.nullifyCount || 0) + 2;
+      addLogMessage(`🕯️ [${pName}] ${attacker.name} の「戊戌夢物語」！ 卓越した脱獄の知恵により身を隠し、敵の攻撃を2回まで絶対回避！`);
+    }
   },
 
   "chikamatsu_monzaemon": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.nullifyCount = 0;
-    target.defenseBuff = false;
-    target.hp = 0;
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      target.nullifyCount = 0;
+      target.defenseBuff = false;
+      const targetCurHp = target.currentHP ?? target.hp ?? 0;
+      
+      if (!attacker.type) attacker.type = "和";
+      if (!target.type) target.type = "西洋";
+
+      // executeDamage で対象を即死処理
+      executeDamage(pName, attacker, target, actorObj, targetObj, targetCurHp, true);
+    }
+
+    // 近松近松（自身）も道連れで退場（両プロパティ同期＆UI更新）
     attacker.hp = 0;
-    addLogMessage(`🎭 [${pName}] ${attacker.name} の「曽根崎心中」！ 絆の極致により ${target.name} を道連れにし、共に命を絶った...！`);
+    attacker.currentHP = 0;
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    }
+
+    addLogMessage(`🎭 [${pName}] ${attacker.name} の「曽根崎心中」！ 絆の極致により ${target ? target.name : ''} を道連れにし、共に命を絶った...！`);
   },
 
   "dogen": function(pName, attacker, target, actorObj, targetObj, activePt) {
     attacker.nullifyCount = (attacker.nullifyCount || 0) + 2;
-    const dmg = attacker.atk + 20;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
+    const dmg = (attacker.atk || 20) + 20;
+
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "和";
+      if (!target.type) target.type = "西洋";
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
     attacker.isStunned = true;
     addLogMessage(`🧘 [${pName}] ${attacker.name} の「身心脱落」！ 執着を捨て去り ${dmg} ダメージ＆2回無敵を得たが、反動で深き沈黙（行動不能）に入った！`);
   },
 
   "tokutomi_soho": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const nobleIds = ["platon", "aristoteles", "hegel", "descartes", "nietzsche", "hobbes"];
-    let nobleEnemies = targetObj.cards.filter(c => c.hp > 0 && nobleIds.includes(c.id));
+    let nobleEnemies = targetObj && targetObj.cards ? targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && nobleIds.includes(c.id)) : [];
     
+    if (!attacker.type) attacker.type = "和";
+
     if (nobleEnemies.length > 0) {
       let nobleTarget = nobleEnemies[0];
-      const dmg = attacker.atk * 2;
-      nobleTarget.hp -= dmg;
-      if (nobleTarget.hp < 0) nobleTarget.hp = 0;
+      const dmg = (attacker.atk || 20) * 2;
+      if (!nobleTarget.type) nobleTarget.type = "西洋";
+      
+      executeDamage(pName, attacker, nobleTarget, actorObj, targetObj, dmg, true);
       addLogMessage(`📢 [${pName}] ${attacker.name} の「平民主義」！ 特権階級たる ${nobleTarget.name} を激しく批判し、${dmg} の大ダメージ！`);
     } else {
-      const dmg = attacker.atk;
-      target.hp -= dmg;
-      if (target.hp < 0) target.hp = 0;
-      addLogMessage(`📢 [${pName}] ${attacker.name} の「平民主義」！ ${target.name} に ${dmg} ダメージを与えた！`);
+      const dmg = attacker.atk || 20;
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!target.type) target.type = "西洋";
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
+      addLogMessage(`📢 [${pName}] ${attacker.name} の「平民主義」！ ${target ? target.name : ''} に ${dmg} ダメージを与えた！`);
     }
   },
 
   "tominaga_nakamoto": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let confucius = targetObj.cards.find(c => c.hp > 0 && c.id === "confucius");
+    let confucius = targetObj && targetObj.cards ? targetObj.cards.find(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && c.id === "confucius") : null;
     if (confucius) {
       const dmg = 45;
-      confucius.hp -= dmg;
-      if (confucius.hp < 0) confucius.hp = 0;
+      if (!attacker.type) attacker.type = "和";
+      if (!confucius.type) confucius.type = "西洋";
+
+      executeDamage(pName, attacker, confucius, actorObj, targetObj, dmg, true);
       addLogMessage(`📜 [${pName}] ${attacker.name} の「出定後語（儒教批判）」！ 敵陣の孔子へ痛烈な論破を行い、${dmg} ダメージを与えた！`);
     } else {
       addLogMessage(`📜 [${pName}] ${attacker.name} は儒教批判を展開したが、敵陣に孔子はいなかった。`);
@@ -1121,33 +1176,44 @@ const specialSkillLogic = {
 
   "nakae_chomin": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const tyrantIds = ["hobbes", "machiavelli", "han_feizi"];
-    let tyrantEnemies = targetObj.cards.filter(c => c.hp > 0 && tyrantIds.includes(c.id));
+    let tyrantEnemies = targetObj && targetObj.cards ? targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && tyrantIds.includes(c.id)) : [];
     
+    if (!attacker.type) attacker.type = "和";
+
     if (tyrantEnemies.length > 0) {
       let tyrant = tyrantEnemies[0];
-      tyrant.hp = 0;
+      const curHp = tyrant.currentHP ?? tyrant.hp ?? 0;
+      if (!tyrant.type) tyrant.type = "西洋";
+
+      executeDamage(pName, attacker, tyrant, actorObj, targetObj, curHp, true);
       addLogMessage(`🔔 [${pName}] ${attacker.name} の「東洋のルソー（自由民権運動）」！ 専制政治を唱える ${tyrant.name} を打倒し、即死（HP0）せしめた！`);
     } else {
       const dmg = 25;
-      target.hp -= dmg;
-      if (target.hp < 0) target.hp = 0;
-      addLogMessage(`🔔 [${pName}] ${attacker.name} の「自由民権運動」！ 民衆の権利を訴え、${target.name} に ${dmg} ダメージ！`);
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!target.type) target.type = "西洋";
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
+      addLogMessage(`🔔 [${pName}] ${attacker.name} の「自由民権運動」！ 民衆の権利を訴え、${target ? target.name : ''} に ${dmg} ダメージ！`);
     }
   },
 
   "natsume_soseki": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let kTargets = targetObj.cards.filter(c => c.hp > 0 && (c.name.includes("K") || c.name.includes("k") || c.id.includes("k")));
+    let kTargets = targetObj && targetObj.cards ? targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && (c.name.includes("K") || c.name.includes("k") || c.id.includes("k"))) : [];
+    if (!attacker.type) attacker.type = "和";
+
     if (kTargets.length > 0) {
       kTargets.forEach(c => {
-        c.hp -= 40;
-        if (c.hp < 0) c.hp = 0;
+        if (!c.type) c.type = "西洋";
+        executeDamage(pName, attacker, c, actorObj, targetObj, 40, true);
       });
       addLogMessage(`📖 [${pName}] ${attacker.name} の「精神的に向上心のない奴は馬鹿だ」！ Kの影を持つものたちに 40 ダメージ！（漱石は無傷）`);
     } else {
-      const dmg = attacker.atk;
-      target.hp -= dmg;
-      if (target.hp < 0) target.hp = 0;
-      addLogMessage(`📖 [${pName}] ${attacker.name} の「こころ」！ ${target.name} に ${dmg} ダメージ！`);
+      const dmg = attacker.atk || 20;
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!target.type) target.type = "西洋";
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
+      addLogMessage(`📖 [${pName}] ${attacker.name} の「こころ」！ ${target ? target.name : ''} に ${dmg} ダメージ！`);
     }
   },
 
