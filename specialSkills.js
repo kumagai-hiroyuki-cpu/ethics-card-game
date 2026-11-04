@@ -1026,21 +1026,6 @@ const specialSkillLogic = {
     addLogMessage(`❄️ [${pName}] ${attacker.name} の「想世界の完成」！${resultMsg} (透谷は命を絶ち退場した)`);
   },
 
-  "huizinga": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dice = Math.floor(Math.random() * 6) + 1;
-    if (dice <= 4) {
-      const dmg = 30;
-      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
-        if (!attacker.type) attacker.type = "西洋";
-        if (!target.type) target.type = "西洋";
-        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
-      }
-      attacker.isStunned = false;
-      addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】！ 運命を引き寄せ ${target.name} に ${dmg} ダメージを与え、さらに連続行動！`);
-    } else {
-      addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】... 運命に見放されターンを終えた。`);
-    }
-  },
   "saicho": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 15;
     if (targetObj && targetObj.cards) {
