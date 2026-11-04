@@ -165,10 +165,12 @@ const specialSkillLogic = {
     addLogMessage(`🛡️ [${pName}] ${attacker.name} の「ないものはない」！ 自身への攻撃を3回まで無効化する状態になった！`);
   },
 
-  "pythagoras": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const randomNum = Math.floor(Math.random() * 10);
-    target.atk = randomNum;
-    addLogMessage(`🔢 [${pName}] ${attacker.name} の「万物は数なり」！ ${target.name} の攻撃力が【${randomNum}】に書き換えられた！`);
+ "pythagoras": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    if (target) {
+      const randomNum = Math.floor(Math.random() * 10);
+      target.atk = randomNum;
+      addLogMessage(`🔢 [${pName}] ${attacker.name} の「万物は数なり」！ ${target.name} の攻撃力が【${randomNum}】に書き換えられた！`);
+    }
   },
 
   "platon": function(pName, attacker, target, actorObj, targetObj, activePt) {
