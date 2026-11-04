@@ -86,8 +86,6 @@ const specialSkillLogic = {
     }
   },
 
-
-
   "gautama_siddhartha": function(pName, attacker, target, actorObj, targetObj, activePt) {
     actorObj.cards.forEach(c => { if (c.hp > 0) c.hp = c.maxHp || 1000; });
     targetObj.cards.forEach(c => { if (c.hp > 0) c.hp = c.maxHp || 1000; });
@@ -120,10 +118,23 @@ const specialSkillLogic = {
     addLogMessage(`🎋 [${pName}] ${attacker.name} の「礼」！ ${target.name} の悪を矯正し、攻撃力を ${atkDown} 下げて強化状態も打ち消した！`);
   },
 
-  "zeno": function(pName, attacker, target, actorObj, targetObj, activePt) {
+"zeno": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 40;
-    target.hp -= dmg;
-    attacker.hp += dmg;
+    
+    // 相手へのダメージ処理（executeDamage で UI更新・死亡処理を連動）
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
+
+    // 自身のHP回復処理（currentHP と hp を両方更新）
+    const maxHpVal = attacker.maxHp || attacker.maxHP || 100;
+    const curHp = attacker.currentHP ?? attacker.hp ?? 0;
+    const newHp = Math.min(maxHpVal, curHp + dmg);
+    attacker.hp = newHp;
+    attacker.currentHP = newHp;
+
     addLogMessage(`🧘 [${pName}] ${attacker.name} の「アパテイア」！ ${target.name} に ${dmg} のダメージを与え、同量のHPを回復した！`);
   },
 
@@ -252,35 +263,48 @@ const specialSkillLogic = {
     }
   },
 
-  "mencius": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+ "mencius": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    let aliveEnemies = targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
     if (aliveEnemies.length >= 2) {
-      let highestAtkEnemy = aliveEnemies.reduce((a, b) => a.atk > b.atk ? a : b);
-      let highestHpEnemy = aliveEnemies.reduce((a, b) => a.hp > b.hp ? a : b);
-      const dmg = highestAtkEnemy.atk;
-      highestHpEnemy.hp -= dmg;
-      if (highestHpEnemy.hp < 0) highestHpEnemy.hp = 0;
+      let highestAtkEnemy = aliveEnemies.reduce((a, b) => (a.atk || 0) > (b.atk || 0) ? a : b);
+      let highestHpEnemy = aliveEnemies.reduce((a, b) => (a.currentHP ?? a.hp ?? 0) > (b.currentHP ?? b.hp ?? 0) ? a : b);
+      const dmg = highestAtkEnemy.atk || 20;
+
+      if (!highestAtkEnemy.type) highestAtkEnemy.type = "西洋";
+      if (!highestHpEnemy.type) highestHpEnemy.type = "西洋";
+
+      // 修正: 敵同士の相打ちダメージを executeDamage で安全に処理
+      const enemyPName = pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1");
+      executeDamage(enemyPName, highestAtkEnemy, highestHpEnemy, targetObj, targetObj, dmg, true);
+
       addLogMessage(`👑 [${pName}] ${attacker.name} の「王道政治」！ ${highestAtkEnemy.name} が魅了され、味方である ${highestHpEnemy.name} に ${dmg} のダメージを与えてしまった！`);
     } else {
-      addLogMessage(`👑 [${pName}]${attacker.name} の「王道政治」が発動したが、敵の数が足りず効果が薄かった！`);
+      addLogMessage(`👑 [${pName}] ${attacker.name} の「王道政治」が発動したが、敵の数が足りず効果が薄かった！`);
     }
   },
 
-  "nagarjuna": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "nagarjuna": function(pName, attacker, target, actorObj, targetObj, activePt) {
     attacker.nullifyCount = 1;
-    target.atk = 0;
-    addLogMessage(`🌪️ [${pName}]${attacker.name} の「空」！ 自身の次への攻撃を無効化状態にし、${target.name} の能力値を0（無）に帰した！`);
+    if (target) {
+      target.atk = 0;
+      addLogMessage(`🌪️ [${pName}] ${attacker.name} の「空」！ 自身の次への攻撃を無効化状態にし、${target.name} の能力値を0（無）に帰した！`);
+    } else {
+      addLogMessage(`🌪️ [${pName}] ${attacker.name} の「空」！ 自身の次への攻撃を無効化状態にした！`);
+    }
   },
-
-  "laozi": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "laozi": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const confucianIds = ["confucius", "mencius", "xunzi", "dong_zhongshu"]; 
-    let confucianEnemies = targetObj.cards.filter(c => c.hp > 0 && confucianIds.includes(c.id));
+    let confucianEnemies = targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && confucianIds.includes(c.id));
     
     if (confucianEnemies.length > 0) {
       let confTarget = confucianEnemies[0];
-      const dmg = attacker.atk * 2;
-      confTarget.hp -= dmg;
-      if (confTarget.hp < 0) confTarget.hp = 0;
+      const dmg = (attacker.atk || 20) * 2;
+      
+      if (!attacker.type) attacker.type = "西洋";
+      if (!confTarget.type) confTarget.type = "西洋";
+
+      // 修正: executeDamage を使用してHP減少とUI更新を確実に連動
+      executeDamage(pName, attacker, confTarget, actorObj, targetObj, dmg, true);
       addLogMessage(`☯️ [${pName}] ${attacker.name} が痛烈に儒家を批判！ 儒家の ${confTarget.name} を論破し ${dmg} の大ダメージ！`);
     } else {
       addLogMessage(`☯️ [${pName}] ${attacker.name} は儒家を批判しようとしたが、敵陣営に儒家の思想家はいなかった！`);
@@ -288,100 +312,118 @@ const specialSkillLogic = {
   },
 
   "cassirer": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.activeVal = 0;
-    addLogMessage(`🔣 [${pName}] ${attacker.name} の「アニマル・シンボリクム」！ ${target.name} の象徴操る力を封じ、スキルの発動を阻止した！`);
+    if (target) {
+      target.activeVal = 0;
+      addLogMessage(`🔣 [${pName}] ${attacker.name} の「アニマル・シンボリクム」！ ${target.name} の象徴操る力を封じ、スキルの発動を阻止した！`);
+    }
   },
 
   "kohlberg": function(pName, attacker, target, actorObj, targetObj, activePt) {
     attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-    addLogMessage(`⚖️ [${pName}]${attacker.name} の「罰の回避」！ 次受ける攻撃を1回無効化する状態になった！`);
+    addLogMessage(`⚖️ [${pName}] ${attacker.name} の「罰の回避」！ 次受ける攻撃を1回無効化する状態になった！`);
   },
 
   "said": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const easternIds = ["gautama_siddhartha", "confucius", "mencius", "laozi", "nagarjuna", "watsuji", "wang_yangming", "mushi_sekai", "xunzi", "dong_zhongshu", "zhuangzi"];
     let affected = false;
-    targetObj.cards.forEach(c => {
-      if (c.hp > 0 && easternIds.includes(c.id)) {
-        c.atk = 0;
-        affected = true;
-      }
-    });
+    if (targetObj && targetObj.cards) {
+      targetObj.cards.forEach(c => {
+        if (c && (c.currentHP ?? c.hp ?? 0) > 0 && easternIds.includes(c.id)) {
+          c.atk = 0;
+          affected = true;
+        }
+      });
+    }
     if (affected) {
-      addLogMessage(`🕌 [${pName}]${attacker.name} の「オリエンタリズム」！ 敵陣の東洋思想家たちはステレオタイプに囚われ、攻撃力が0になった！`);
+      addLogMessage(`🕌 [${pName}] ${attacker.name} の「オリエンタリズム」！ 敵陣の東洋思想家たちはステレオタイプに囚われ、攻撃力が0になった！`);
     } else {
-      addLogMessage(`🕌 [${pName}]${attacker.name} のスキル発動！ しかし対象となる東洋の思想家は敵陣にいなかった。`);
+      addLogMessage(`🕌 [${pName}] ${attacker.name} のスキル発動！ しかし対象となる東洋の思想家は敵陣にいなかった。`);
     }
   },
 
   "sen": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    actorObj.cards.forEach(c => {
-      if (c.hp > 0) c.defenseBuff = true;
-    });
-    addLogMessage(`🕊️ [${pName}]${attacker.name} の「人間の安全保障」！ 味方全員の安全が保障され、受けるダメージが半減する！`);
+    if (actorObj && actorObj.cards) {
+      actorObj.cards.forEach(c => {
+        if (c && (c.currentHP ?? c.hp ?? 0) > 0) c.defenseBuff = true;
+      });
+    }
+    addLogMessage(`🕊️ [${pName}] ${attacker.name} の「人間の安全保障」！ 味方全員の安全が保障され、受けるダメージが半減する！`);
   },
 
   "huizinga": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dice = Math.floor(Math.random() * 6) + 1;
     if (dice <= 4) {
       const dmg = 30;
-      target.hp -= dmg;
-      if (target.hp < 0) target.hp = 0;
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!attacker.type) attacker.type = "西洋";
+        if (!target.type) target.type = "西洋";
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
       attacker.isStunned = false;
-      addLogMessage(`🎲 [${pName}]${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】！ 運命を引き寄せ ${target.name} に ${dmg} ダメージを与え、さらに連続行動！`);
+      addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】！ 運命を引き寄せ ${target.name} に ${dmg} ダメージを与え、さらに連続行動！`);
     } else {
       addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】... 運命に見放されターンを終えた。`);
     }
   },
 
   "jonas": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const currentTurn = window.gameTurnCount || 1;
+    const currentTurn = (gameState && gameState.turnCount) || window.gameTurnCount || 1;
     const totalDmg = currentTurn * 20;
-    let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+    let aliveEnemies = targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
     
     if (aliveEnemies.length > 0) {
       const dmgPerEnemy = Math.floor(totalDmg / aliveEnemies.length);
       aliveEnemies.forEach(e => {
-        e.hp -= dmgPerEnemy;
-        if (e.hp < 0) e.hp = 0;
+        if (!attacker.type) attacker.type = "西洋";
+        if (!e.type) e.type = "西洋";
+        executeDamage(pName, attacker, e, actorObj, targetObj, dmgPerEnemy, true);
       });
-      addLogMessage(`⏳ [${pName}]${attacker.name} の「未来世代の審判」！ 経過 ${currentTurn} ターン分の責任（計 ${totalDmg} ダメージ）が敵全体に均等に下された！`);
+      addLogMessage(`⏳ [${pName}] ${attacker.name} の「未来世代の審判」！ 経過 ${currentTurn} ターン分の責任（計 ${totalDmg} ダメージ）が敵全体に均等に下された！`);
     }
   },
 
   "arendt": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dmg = attacker.atk;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    target.isStunned = true;
-    addLogMessage(`⛓️ [${pName}]${attacker.name} の「悪の凡庸さ」！ ${target.name} に ${dmg} ダメージを与え、思考停止状態（行動不能）にした！`);
+    const dmg = attacker.atk || 20;
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      target.isStunned = true;
+    }
+    addLogMessage(`⛓️ [${pName}] ${attacker.name} の「悪の凡庸さ」！ ${target ? target.name : ''} に ${dmg} ダメージを与え、思考停止状態（行動不能）にした！`);
   },
 
   "adam_smith": function(pName, attacker, target, actorObj, targetObj, activePt) {
     [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        c.atkBuff = false;
-        c.defenseBuff = false;
-        c.nullifyCount = 0;
-        c.isStunned = false;
-      });
+      if (side && side.cards) {
+        side.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0) {
+            c.atkBuff = false;
+            c.defenseBuff = false;
+            c.nullifyCount = 0;
+            c.isStunned = false;
+          }
+        });
+      }
     });
-    addLogMessage(`⚖️ [${pName}]${attacker.name} の「神の見えざる手」！ 市場の自動調節機能により、場に存在した全ての強化・弱体化効果が完全に平準化された！`);
+    addLogMessage(`⚖️ [${pName}] ${attacker.name} の「神の見えざる手」！ 市場の自動調節機能により、場に存在した全ての強化・弱体化効果が完全に平準化された！`);
   },
 
-  "wittgenstein": function(pName, attacker, target, actorObj, targetObj, activePt) {
+"wittgenstein": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const silenceDmg = 25;
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp -= silenceDmg;
-          if (enemy.hp < 0) enemy.hp = 0;
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, silenceDmg, true);
         }
       });
     }
-    addLogMessage(`🤫 [${pName}]${attacker.name} の「沈黙の命題」！ 語り得ぬものを排除し、敵全体に ${silenceDmg} のHP減少を与えた！`);
+    addLogMessage(`🤫 [${pName}] ${attacker.name} の「沈黙の命題」！ 語り得ぬものを排除し、敵全体に ${silenceDmg} のダメージを与えた！`);
   },
 
- "m_weber": function(pName, attacker, target, actorObj, targetObj, activePt) {
+  "m_weber": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let sacrificedHp = 0;
     if (actorObj && actorObj.cards) {
       actorObj.cards.forEach(ally => {
@@ -389,7 +431,6 @@ const specialSkillLogic = {
           const curHp = ally.currentHP ?? ally.hp ?? 0;
           if (curHp > 1) {
             sacrificedHp += (curHp - 1);
-            // 味方のHPを極限（1）に固定し、両方のプロパティを同期
             ally.hp = 1;
             ally.currentHP = 1;
           }
@@ -399,42 +440,51 @@ const specialSkillLogic = {
     attacker.atk = (attacker.atk || 0) + sacrificedHp;
     addLogMessage(`💥 [${pName}] ${attacker.name} の「支配者の重撃(ドミネイション・インパクト)」！ 味方全員の命を極限（HP1）まで捧げ、自身の攻撃力が【+${sacrificedHp}】上昇した！！`);
 
-    // 画面上のHPバーと数値を即座に反映
     if (typeof updateGameUI === "function") {
       updateGameUI();
     }
   },
- "erasmus": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    // 敵・味方両方の陣営を処理
-    [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        // 生存しており、かつタイプが「西洋」の思想家が対象
-        if (c.hp > 0 && c.type === "西洋") {
-          const diff = Math.floor(Math.random() * 31) - 15; // -15 ～ +15 のランダム変動
-          c.atk = Math.max(1, c.atk + diff);
-        }
-      });
-    });
-    addLogMessage(`🃏 [${pName}]${attacker.name} の「痴愚神礼讃」！ 場の西洋思想家たちのステータスが狂乱し乱高下した！`);
-  },
 
+  "erasmus": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    [actorObj, targetObj].forEach(side => {
+      if (side && side.cards) {
+        side.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0 && c.type === "西洋") {
+            const diff = Math.floor(Math.random() * 31) - 15;
+            c.atk = Math.max(1, (c.atk || 0) + diff);
+          }
+        });
+      }
+    });
+    addLogMessage(`🃏 [${pName}] ${attacker.name} の「痴愚神礼讃」！ 場の西洋思想家たちのステータスが狂乱し乱高下した！`);
+  },
 
   "calvin": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let killedCount = 0;
-    [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        if (c.hp > 0 && c.hp <= 40) {
-          c.hp = 0;
-          killedCount++;
-        }
-      });
+    const allSides = [
+      { sideObj: actorObj, sidePName: pName },
+      { sideObj: targetObj, sidePName: pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1") }
+    ];
+
+    allSides.forEach(({ sideObj, sidePName }) => {
+      if (sideObj && sideObj.cards) {
+        sideObj.cards.forEach(c => {
+          const curHp = c ? (c.currentHP ?? c.hp ?? 0) : 0;
+          if (c && curHp > 0 && curHp <= 40) {
+            if (!attacker.type) attacker.type = "西洋";
+            if (!c.type) c.type = "西洋";
+            executeDamage(sidePName, attacker, c, actorObj, sideObj, curHp, true);
+            killedCount++;
+          }
+        });
+      }
     });
-    addLogMessage(`⚡ [${pName}]${attacker.name} の「神の権力」！ HP40以下の弱者 ${killedCount} 体に神の審判が下り、HPが0となった！`);
+    addLogMessage(`⚡ [${pName}] ${attacker.name} の「神の権力」！ HP40以下の弱者 ${killedCount} 体に神の審判が下り、HPが0となった！`);
   },
 
-  "kierkegaard": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "kierkegaard": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (Math.random() < 0.66) {
-      let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+      let aliveEnemies = targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
       if (aliveEnemies.length > 1) {
         for (let i = 1; i < aliveEnemies.length; i++) {
           aliveEnemies[i].isStunned = true;
@@ -447,42 +497,49 @@ const specialSkillLogic = {
   },
 
   "sartre": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.activeVal = 0;
-    target.isSkillSealed = true;
-    addLogMessage(`☕ [${pName}] ${attacker.name} の「実存は本質に先立つ」！ ${target.name} の本質（固有スキル）を消去し、スキルを封じる！`);
+    if (target) {
+      target.activeVal = 0;
+      target.isSkillSealed = true;
+      addLogMessage(`☕ [${pName}] ${attacker.name} の「実存は本質に先立つ」！ ${target.name} の本質（固有スキル）を消去し、スキルを封じる！`);
+    }
   },
 
   "james": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+    let aliveEnemies = targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
     if (aliveEnemies.length > 0) {
-      let lowestHpEnemy = aliveEnemies.reduce((a, b) => a.hp < b.hp ? a : b);
-      let dmg = 25;
-      if (lowestHpEnemy.hp <= 50) {
-        dmg = 80;
-      }
-      lowestHpEnemy.hp -= dmg;
-      if (lowestHpEnemy.hp < 0) lowestHpEnemy.hp = 0;
-      addLogMessage(`🛠️ [${pName}]${attacker.name} の「プラグマティズム」！ 最も弱った ${lowestHpEnemy.name} へ実用的な極大撃滅（${dmg} ダメージ）！`);
+      let lowestHpEnemy = aliveEnemies.reduce((a, b) => (a.currentHP ?? a.hp ?? 0) < (b.currentHP ?? b.hp ?? 0) ? a : b);
+      const curHp = lowestHpEnemy.currentHP ?? lowestHpEnemy.hp ?? 0;
+      let dmg = curHp <= 50 ? 80 : 25;
+
+      if (!attacker.type) attacker.type = "西洋";
+      if (!lowestHpEnemy.type) lowestHpEnemy.type = "西洋";
+
+      // 修正: executeDamage を使用して極大ダメージを処理
+      executeDamage(pName, attacker, lowestHpEnemy, actorObj, targetObj, dmg, true);
+      addLogMessage(`🛠️ [${pName}] ${attacker.name} の「プラグマティズム」！ 最も弱った ${lowestHpEnemy.name} へ実用的な極大撃滅（${dmg} ダメージ）！`);
     }
   },
 
   "spinoza": function(pName, attacker, target, actorObj, targetObj, activePt) {
     attacker.fixedDamageVal = 5;
-    addLogMessage(`📐 [${pName}]${attacker.name} の「決定論」！ 必至の法則により、次回受ける被ダメージを【5】に決定（固定）した！`);
+    addLogMessage(`📐 [${pName}] ${attacker.name} の「決定論」！ 必至の法則により、次回受ける被ダメージを【5】に決定（固定）した！`);
   },
 
   "spencer": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 30;
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp -= dmg;
-          if (enemy.hp < 0) enemy.hp = 0;
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+
+          // 修正: 敵全体へのダメージを executeDamage で処理
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, dmg, true);
           enemy.activeVal = 0;
         }
       });
     }
-    addLogMessage(`🦖 [${pName}]${attacker.name} の「社会進化論」！ 適者生存の進化圧力を叩き込み、敵全体に ${dmg} ダメージ＆スキルポイント奪取！`);
+    addLogMessage(`🦖 [${pName}] ${attacker.name} の「社会進化論」！ 適者生存の進化圧力を叩き込み、敵全体に ${dmg} ダメージ＆スキルポイント奪取！`);
   },
 
   "saussure": function(pName, attacker, target, actorObj, targetObj, activePt) {
@@ -491,178 +548,279 @@ const specialSkillLogic = {
   },
 
   "da_vinci": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const stolenAtk = Math.floor(target.atk / 2);
-    attacker.atk += stolenAtk;
-    const dmg = attacker.atk;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    addLogMessage(`🎨 [${pName}] ${attacker.name} の「万能人だからね」！ ${target.name} のスキル技術を完全模倣して吸収（ATK+${stolenAtk}）し、${dmg} ダメージ！`);
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      const stolenAtk = Math.floor((target.atk || 0) / 2);
+      attacker.atk = (attacker.atk || 0) + stolenAtk;
+      const dmg = attacker.atk;
+
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理とUI更新を連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      addLogMessage(`🎨 [${pName}] ${attacker.name} の「万能人だからね」！ ${target.name} のスキル技術を完全模倣して吸収（ATK+${stolenAtk}）し、${dmg} ダメージ！`);
+    }
   },
 
   "dewey": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (Math.random() < 0.5) {
       attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-      addLogMessage(`⚙️ [${pName}]${attacker.name} の「道具主義」！ 相手の攻撃パターンを学習し、回避姿勢をとった（無効化獲得）！`);
+      addLogMessage(`⚙️ [${pName}] ${attacker.name} の「道具主義」！ 相手の攻撃パターンを学習し、回避姿勢をとった（無効化獲得）！`);
     } else {
-      addLogMessage(`⚙️ [${pName}]${attacker.name} の「道具主義」！ 実験的観察を行ったが、回避のタイミングを逃した。`);
+      addLogMessage(`⚙️ [${pName}] ${attacker.name} の「道具主義」！ 実験的観察を行ったが、回避のタイミングを逃した。`);
     }
   },
 
   "nietzsche": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let deadAllies = actorObj.cards.filter(c => c.hp <= 0);
+    let deadAllies = actorObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) <= 0);
     if (deadAllies.length > 0) {
       let revived = deadAllies[0];
       revived.hp = 25;
-      addLogMessage(`🍷 [${pName}]${attacker.name} の「永劫回帰」！ 倒れていた ${revived.name} がHP25で戦場に復活した！`);
+      revived.currentHP = 25;
+      addLogMessage(`🍷 [${pName}] ${attacker.name} の「永劫回帰」！ 倒れていた ${revived.name} がHP25で戦場に復活した！`);
     } else {
-      attacker.hp += 25;
+      const maxHpVal = attacker.maxHp || attacker.maxHP || 100;
+      const curHp = attacker.currentHP ?? attacker.hp ?? 0;
+      const newHp = Math.min(maxHpVal, curHp + 25);
+      attacker.hp = newHp;
+      attacker.currentHP = newHp;
       addLogMessage(`🍷 [${pName}] ${attacker.name} の「永劫回帰」！ 倒れた味方はおらず、自身のHPを25回復した！`);
+    }
+
+    // 回復・復活を即時UI反映
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
     }
   },
 
   "habermas": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dmg = attacker.atk;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    actorObj.cards.forEach(c => c.activeVal = 0);
-    targetObj.cards.forEach(c => c.activeVal = 0);
-    addLogMessage(`🗣️ [${pName}] ${attacker.name} の「対話的理性」！ ${target.name} に ${dmg} ダメージを与え、双方のスキル発動を抑制した！`);
+    const dmg = attacker.atk || 20;
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理を安全に実行
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
+
+    // 双方のスキル発動ポイントをリセット
+    [actorObj, targetObj].forEach(side => {
+      if (side && side.cards) {
+        side.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0) c.activeVal = 0;
+        });
+      }
+    });
+
+    addLogMessage(`🗣️ [${pName}] ${attacker.name} の「対話的理性」！ ${target ? target.name : ''} に ${dmg} ダメージを与え、双方のスキル発動を抑制した！`);
   },
 
-  "heidegger": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dmg = attacker.atk;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    let injuredAllies = actorObj.cards.filter(c => c.hp > 0);
+ "heidegger": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    const dmg = attacker.atk || 20;
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理を連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
+
+    let injuredAllies = actorObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0);
     if (injuredAllies.length > 0) {
-      let targetAlly = injuredAllies.reduce((a, b) => a.hp < b.hp ? a : b);
-      targetAlly.hp += 40;
-      addLogMessage(`⏳ [${pName}] ${attacker.name} の「存在と時間」！ ${target.name} に ${dmg} ダメージを与え、${targetAlly.name} の時間を巻き戻し回復！`);
+      let targetAlly = injuredAllies.reduce((a, b) => (a.currentHP ?? a.hp ?? 0) < (b.currentHP ?? b.hp ?? 0) ? a : b);
+      const maxHpVal = targetAlly.maxHp || targetAlly.maxHP || 100;
+      const curHp = targetAlly.currentHP ?? targetAlly.hp ?? 0;
+      const newHp = Math.min(maxHpVal, curHp + 40);
+      targetAlly.hp = newHp;
+      targetAlly.currentHP = newHp;
+
+      if (typeof updateGameUI === "function") {
+        updateGameUI();
+      }
+      addLogMessage(`⏳ [${pName}] ${attacker.name} の「存在と時間」！ ${target ? target.name : ''} に ${dmg} ダメージを与え、${targetAlly.name} の時間を巻き戻し回復！`);
+    } else {
+      addLogMessage(`⏳ [${pName}] ${attacker.name} の「存在と時間」！ ${target ? target.name : ''} に ${dmg} ダメージを与えた！`);
     }
   },
 
   "pascal": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp = Math.floor(enemy.hp / 2);
+        const curHp = enemy ? (enemy.currentHP ?? enemy.hp ?? 0) : 0;
+        if (enemy && curHp > 0) {
+          const cutDmg = Math.floor(curHp / 2);
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+
+          // 修正: HP半減分のダメージを executeDamage で安全に付与
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, cutDmg, true);
         }
       });
     }
-    addLogMessage(`🌾 [${pName}]${attacker.name} の「考える葦」！ 敵全体が無限の深淵に呑まれ、現在のHPが半減した！`);
+    addLogMessage(`🌾 [${pName}] ${attacker.name} の「考える葦」！ 敵全体が無限の深淵に呑まれ、現在のHPが半減した！`);
   },
 
   "foucault": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    targetObj.cards.forEach(enemy => {
-      if (enemy.hp > 0) {
-        enemy.atkBuff = false;
-        enemy.defenseBuff = false;
-        enemy.atk = Math.min(enemy.atk, 20);
-      }
-    });
-    addLogMessage(`👁️ [${pName}]${attacker.name} の「人間の終焉」！ パノプティコンの支配構造を解体し、敵全体の強化状態を完全リセット！`);
+    if (targetObj && targetObj.cards) {
+      targetObj.cards.forEach(enemy => {
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          enemy.atkBuff = false;
+          enemy.defenseBuff = false;
+          enemy.atk = Math.min(enemy.atk || 0, 20);
+        }
+      });
+    }
+    addLogMessage(`👁️ [${pName}] ${attacker.name} の「人間の終焉」！ パノプティコンの支配構造を解体し、敵全体の強化状態を完全リセット！`);
   },
 
   "mill": function(pName, attacker, target, actorObj, targetObj, activePt) {
     attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-    addLogMessage(`⚖️ [${pName}]${attacker.name} の「他者危害の原理」！ 他者への危害を抑止し、次の被ダメージを1回無効化した！`);
+    addLogMessage(`⚖️ [${pName}] ${attacker.name} の「他者危害の原理」！ 他者への危害を抑止し、次の被ダメージを1回無効化した！`);
   },
 
   "montaigne": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let totalDrained = 0;
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          let drain = Math.floor(enemy.hp / 4);
-          enemy.hp -= drain;
+        const curHp = enemy ? (enemy.currentHP ?? enemy.hp ?? 0) : 0;
+        if (enemy && curHp > 0) {
+          let drain = Math.floor(curHp / 4);
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+
+          // 修正: 吸収分のダメージを executeDamage で処理
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, drain, true);
           totalDrained += drain;
         }
       });
     }
-    attacker.hp += totalDrained;
-    addLogMessage(`🤔 [${pName}]${attacker.name} の「ク・セ・ジュ（私は何を知るか）」！ 敵全員からHPを1/4ずつ（計 ${totalDrained}）吸収した！`);
+
+    // 自身のHP回復（両プロパティ同期＆上限処理）
+    const maxHpVal = attacker.maxHp || attacker.maxHP || 100;
+    const selfCurHp = attacker.currentHP ?? attacker.hp ?? 0;
+    const newHp = Math.min(maxHpVal, selfCurHp + totalDrained);
+    attacker.hp = newHp;
+    attacker.currentHP = newHp;
+
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    }
+    addLogMessage(`🤔 [${pName}] ${attacker.name} の「ク・セ・ジュ（私は何を知るか）」！ 敵全員からHPを1/4ずつ（計 ${totalDrained}）吸収した！`);
   },
 
   "jung": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) enemy.isStunned = true;
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          enemy.isStunned = true;
+        }
       });
     }
     addLogMessage(`🌀 [${pName}] ${attacker.name} の「集合的無意識」！ 共通の無意識領域を刺激し、敵全体を精神的混乱（行動不能）に陥れた！`);
   },
 
   "leibniz": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.defenseBuff = false;
-    const hits = 3;
-    const dmgPerHit = 12;
-    const totalDmg = hits * dmgPerHit;
-    target.hp -= totalDmg;
-    if (target.hp < 0) target.hp = 0;
-    addLogMessage(`∫ [${pName}] ${attacker.name} の「無限小解析」！ 防御を無限に分解し、極小の微小ダメージを瞬時に重ねて ${totalDmg} ダメージ！`);
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      target.defenseBuff = false;
+      const hits = 3;
+      const dmgPerHit = 12;
+      const totalDmg = hits * dmgPerHit;
+
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理を連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, totalDmg, true);
+      addLogMessage(`∫ [${pName}] ${attacker.name} の「無限小解析」！ 防御を無限に分解し、極小の微小ダメージを瞬時に重ねて ${totalDmg} ダメージ！`);
+    }
   },
 
   "rousseau": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.hp = Math.max(1, attacker.hp - 10);
+    // 自身のHP削りコスト（両プロパティ同期）
+    const selfCurHp = attacker.currentHP ?? attacker.hp ?? 0;
+    const newSelfHp = Math.max(1, selfCurHp - 10);
+    attacker.hp = newSelfHp;
+    attacker.currentHP = newSelfHp;
+
     const reduceVal = activePt || 25;
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp = Math.max(0, enemy.hp - reduceVal);
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+
+          // 修正: 敵全体へのダメージを executeDamage で安全に処理
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, reduceVal, true);
         }
       });
     }
-    addLogMessage(`📜 [${pName}]${attacker.name} の「社会契約説」！ 自身のHPを10差し出し、一般意志により敵全員のHPを ${reduceVal} 減少させた！`);
+
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    }
+    addLogMessage(`📜 [${pName}] ${attacker.name} の「社会契約説」！ 自身のHPを10差し出し、一般意志により敵全員のHPを ${reduceVal} 減少させた！`);
   },
 
   "luther": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 45;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    addLogMessage(`✝️ [${pName}] ${attacker.name} の「宗教改革」！ 95ヶ条の論題を叩きつけ、${target.name} に ${dmg} の審判ダメージ！`);
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理を連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      addLogMessage(`✝️ [${pName}] ${attacker.name} の「宗教改革」！ 95ヶ条の論題を叩きつけ、${target.name} に ${dmg} の審判ダメージ！`);
+    }
   },
 
   "levi_strauss": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.activeVal = 0;
-    addLogMessage(`🦴 [${pName}] ${attacker.name} の「構造分析」！ ${target.name} の思考構造を解体し、固有スキルを封殺した！`);
+    if (target) {
+      target.activeVal = 0;
+      addLogMessage(`🦴 [${pName}] ${attacker.name} の「構造分析」！ ${target.name} の思考構造を解体し、固有スキルを封殺した！`);
+    }
   },
 
   "levinas": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const westernIds = ["socrates", "platon", "aristoteles", "kant", "hegel", "descartes", "nietzsche", "spinoza"];
-    let hasWestern = targetObj.cards.some(c => c.hp > 0 && westernIds.includes(c.id));
+    let hasWestern = targetObj && targetObj.cards && targetObj.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && westernIds.includes(c.id));
     
     if (hasWestern) {
       const dmg = 30;
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp -= dmg;
-          if (enemy.hp < 0) enemy.hp = 0;
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+
+          // 修正: 西洋思想家存在時の敵全体ダメージを executeDamage で連動
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, dmg, true);
         }
       });
-      addLogMessage(`👤 [${pName}]${attacker.name} の「他者の倫理（西洋批判）」！ 敵陣の自我中心主義を批判し、全体に ${dmg} ダメージ！`);
+      addLogMessage(`👤 [${pName}] ${attacker.name} の「他者の倫理（西洋批判）」！ 敵陣の自我中心主義を批判し、全体に ${dmg} ダメージ！`);
     } else {
       addLogMessage(`👤 [${pName}] ${attacker.name} のスキル発動！ 対象となる西洋哲学の系譜は存在しなかった。`);
     }
   },
 
-  "rawls": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "rawls": function(pName, attacker, target, actorObj, targetObj, activePt) {
     [actorObj, targetObj].forEach(side => {
-      side.cards.forEach(c => {
-        if (c.hp > 0) {
-          c.atk = 20;
-          c.atkBuff = false;
-          c.defenseBuff = false;
-        }
-      });
+      if (side && side.cards) {
+        side.cards.forEach(c => {
+          if (c && (c.currentHP ?? c.hp ?? 0) > 0) {
+            c.atk = 20;
+            c.atkBuff = false;
+            c.defenseBuff = false;
+          }
+        });
+      }
     });
     addLogMessage(`⚖️ [${pName}] ${attacker.name} の「無知のヴェール」！ 公正な機会均等により、敵味方すべての攻撃力が平準化（20に統一）された！`);
   },
 
   "ando_shoeki": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
+    let aliveEnemies = targetObj && targetObj.cards ? targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0) : [];
     if (aliveEnemies.length > 0) {
-      let highestAtkEnemy = aliveEnemies.reduce((a, b) => a.atk > b.atk ? a : b);
-      highestAtkEnemy.atk = Math.floor(highestAtkEnemy.atk / 2);
+      let highestAtkEnemy = aliveEnemies.reduce((a, b) => (a.atk || 0) > (b.atk || 0) ? a : b);
+      highestAtkEnemy.atk = Math.floor((highestAtkEnemy.atk || 0) / 2);
       addLogMessage(`🌾 [${pName}] ${attacker.name} の「自然真営道」！ 不耕貪食を咎め、最高火力を持つ ${highestAtkEnemy.name} の攻撃力を半減させた！`);
     }
   },
@@ -670,42 +828,51 @@ const specialSkillLogic = {
   "freud": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (Math.random() < 0.5) {
       [actorObj, targetObj].forEach(side => {
-        side.cards.forEach(c => {
-          c.atkBuff = false;
-          c.defenseBuff = false;
-          c.activeVal = 0;
-        });
+        if (side && side.cards) {
+          side.cards.forEach(c => {
+            if (c) {
+              c.atkBuff = false;
+              c.defenseBuff = false;
+              c.activeVal = 0;
+            }
+          });
+        }
       });
-      addLogMessage(`🧠 [${pName}]${attacker.name} の「超自我」が発動！ 本能(エス)を完璧に抑圧し、双方のバフ・スキル効果を無に帰した！`);
+      addLogMessage(`🧠 [${pName}] ${attacker.name} の「超自我」が発動！ 本能(エス)を完璧に抑圧し、双方のバフ・スキル効果を無に帰した！`);
     } else {
-      addLogMessage(`🧠 [${pName}]${attacker.name} は精神分析を試みたが、欲望の抑圧に失敗した...`);
+      addLogMessage(`🧠 [${pName}] ${attacker.name} は精神分析を試みたが、欲望の抑圧に失敗した...`);
     }
   },
 
   "fromm": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dmg = attacker.atk + 10;
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
+    const dmg = (attacker.atk || 20) + 10;
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してダメージ処理を連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+    }
     attacker.isStunned = true;
-    addLogMessage(`🏃 [${pName}]${attacker.name} の「自由からの逃走」！ ${target.name} に ${dmg} ダメージを与え、安全な領域へ退避した！`);
+    addLogMessage(`🏃 [${pName}] ${attacker.name} の「自由からの逃走」！ ${target ? target.name : ''} に ${dmg} ダメージを与え、安全な領域へ退避した！`);
   },
 
-"hegel": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    let deadAllies = actorObj.cards.filter(c => c.hp <= 0);
+  "hegel": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    let deadAllies = actorObj && actorObj.cards ? actorObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) <= 0) : [];
     if (deadAllies.length > 0) {
       let revived = deadAllies[0];
       revived.hp = 40;
-      if (revived.hasOwnProperty('currentHP')) {
-        revived.currentHP = 40; // currentHPを使っている場合はこちらも40に設定
-      }
-      addLogMessage(`🌀 [${pName}]${attacker.name} の「アウフヘーベン」！ 止揚の果てに ${revived.name} をHP40の新たな段階で復活させた！`);
+      revived.currentHP = 40;
+      addLogMessage(`🌀 [${pName}] ${attacker.name} の「アウフヘーベン」！ 止揚の果てに ${revived.name} をHP40の新たな段階で復活させた！`);
     } else {
-      attacker.atk += 15;
+      attacker.atk = (attacker.atk || 0) + 15;
       addLogMessage(`🌀 [${pName}] ${attacker.name} の「アウフヘーベン」！ 倒れた味方はおらず、自身の存在を高めて攻撃力UP！`);
     }
 
-    // ★画面の表示を更新する関数の呼び出し
-    if (typeof updateBattleUI === "function") {
+    // UI表示の即時反映
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    } else if (typeof updateBattleUI === "function") {
       updateBattleUI();
     }
   },
@@ -792,81 +959,25 @@ const specialSkillLogic = {
   },
 
   "uchimura_kanzo": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
-    addLogMessage(`🕊️ [${pName}]${attacker.name} の「非戦論」！ 刀を捨て平和を主張し、次受ける攻撃を完全無効化する状態になった！`);
+    if (attacker) {
+      attacker.nullifyCount = (attacker.nullifyCount || 0) + 1;
+      addLogMessage(`🕊️ [${pName}] ${attacker.name} の「非戦論」！ 刀を捨て平和を主張し、次受ける攻撃を完全無効化する状態になった！`);
+    }
   },
 
   "kamo_no_mabuchi": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga"];
     let absorbedAtk = 0;
+    const enemyPName = pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1");
     
-    targetObj.cards.forEach(c => {
-      if (c.hp > 0 && !japaneseIds.includes(c.id)) {
-        c.hp = Math.max(0, c.hp - 5);
-        c.atk = Math.max(0, c.atk - 5);
-        absorbedAtk += 5;
-      }
-    });
-
-    attacker.atk += absorbedAtk;
-    let extraText = "";
-
-    let hasNorinaga = actorObj.cards.some(c => c.hp > 0 && c.id === "motoori_norinaga");
-    if (hasNorinaga) {
-      attacker.atk += 5;
-      extraText = " さらに本居宣長と同席のため攻撃力+5！";
-    }
-
-    addLogMessage(`🌸 [${pName}]${attacker.name} の「国学」！ 海外の思想家から力を吸収（ATK+${absorbedAtk}）！${extraText}`);
-  },
-
-  "kitamura_tokoku": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    const dice = Math.floor(Math.random() * 6) + 1;
-    let resultMsg = "";
-    
-    if (dice === 1) {
-      let aliveEnemies = targetObj.cards.filter(c => c.hp > 0);
-      if (aliveEnemies.length > 0) {
-        let targetEnemy = aliveEnemies.reduce((a, b) => a.hp > b.hp ? a : b);
-        targetEnemy.hp = 0;
-        resultMsg = ` 出目【1】！ 理想の想世界が完成し、${targetEnemy.name} を道連れに即死させた！`;
-      }
-    } else {
-      resultMsg = ` 出目【${dice}】... 理想は現実を穿てなかった。`;
-    }
-
-    attacker.hp = 0;
-    addLogMessage(`❄️ [${pName}]${attacker.name} の「想世界の完成」！${resultMsg} (透谷は命を絶ち退場した)`);
-  },
-
-  "kukai": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    actorObj.cards.forEach(c => {
-      if (c.hp > 0) c.canKukaiRevive = true;
-    });
-    addLogMessage(`☸️ [${pName}] ${attacker.name} の「即身成仏」！ 味方全体に密教の加護が与えられ、倒れた際一度だけHP半分で復活する権能を得た！`);
-  },
-
-  "kotoku_shusui": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.atkBuff = false;
-    target.defenseBuff = false;
-    const stolenAtk = Math.min(target.atk, 15);
-    target.atk -= stolenAtk;
-    attacker.atk += stolenAtk;
-    addLogMessage(`🔥 [${pName}] ${attacker.name} の「直接行動」！ 議会を通さぬ革命的猛攻により、${target.name} の強打を封じ攻撃力を ${stolenAtk} 奪取した！`);
-  },
-
-  "kobayashi_hideo": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (targetObj && targetObj.cards) {
-      targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.atkBuff = false;
-          enemy.defenseBuff = false;
-          enemy.atk = Math.max(0, enemy.atk - 15);
-        }
-      });
-    }
-    addLogMessage(`👓 [${pName}] ${attacker.name} の「批評の眼」！ 敵全カードの本質を冷徹に見抜き、全強化を解除し攻撃力を15低下させた！`);
-  },
+      targetObj.cards.forEach(c => {
+        if (c && (c.currentHP ?? c.hp ?? 0) > 0 && !japaneseIds.includes(c.id)) {
+          if (!attacker.type) attacker.type = "和";
+          if (!c.type) c.type = "西洋";
+          
+          // 修正: executeDamage を使用してHP減少を連動
+          execute
 
   "saicho": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 15;
