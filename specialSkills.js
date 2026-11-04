@@ -173,39 +173,61 @@ const specialSkillLogic = {
     }
   },
 
+ "pythagoras": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    if (target) {
+      const randomNum = Math.floor(Math.random() * 10);
+      target.atk = randomNum;
+      addLogMessage(`🔢 [${pName}] ${attacker.name} の「万物は数なり」！ ${target.name} の攻撃力が【${randomNum}】に書き換えられた！`);
+    }
+  },
+
   "platon": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    target.atk = 20;
-    target.atkBuff = false;
-    target.defenseBuff = false;
-    const dmg = 40; 
-    target.hp -= dmg;
-    if (target.hp < 0) target.hp = 0;
-    addLogMessage(`💡 [${pName}] ${attacker.name} の「イデア支配」！ ${target.name} をイデア界に引き戻して弱体化させ、${dmg} のダメージを与えた！`);
+    if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+      target.atk = 20;
+      target.atkBuff = false;
+      target.defenseBuff = false;
+      const dmg = 40; 
+      
+      if (!attacker.type) attacker.type = "西洋";
+      if (!target.type) target.type = "西洋";
+
+      // 修正: executeDamage を使用してHP減少とUI更新を確実に連動
+      executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      addLogMessage(`💡 [${pName}] ${attacker.name} の「イデア支配」！ ${target.name} をイデア界に引き戻して弱体化させた！`);
+    }
   },
 
   "protagoras": function(pName, attacker, target, actorObj, targetObj, activePt) {
-    attacker.atk = Math.max(attacker.atk, target.atk);
-    addLogMessage(`📏 [${pName}] ${attacker.name} の「人間は万物の尺度である」！ ${target.name} を尺度とし、自身の攻撃力を同等に引き上げた！`);
+    if (target) {
+      attacker.atk = Math.max(attacker.atk || 0, target.atk || 0);
+      addLogMessage(`📏 [${pName}] ${attacker.name} の「人間は万物の尺度である」！ ${target.name} を尺度とし、自身の攻撃力を同等に引き上げた！`);
+    }
   },
 
   "homer": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 10;
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
-          enemy.hp -= dmg;
-          if (enemy.hp < 0) enemy.hp = 0;
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+          // 修正: 敵全員へのダメージを executeDamage で実行
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, dmg, true);
         }
       });
     }
-    attacker.hp = 0;
-    addLogMessage(`🏛️ [${pName}]${attacker.name} は命を懸けて「ギリシア神話」を書き上げた！ 敵全体に ${dmg} のダメージを与え、自身は倒れた...！`);
+    // 自身の死亡処理（自分自身を倒れた状態にする）
+    const selfHp = attacker.currentHP ?? attacker.hp ?? 0;
+    if (selfHp > 0) {
+      executeDamage(pName, attacker, attacker, actorObj, actorObj, selfHp, true);
+    }
+    addLogMessage(`🏛️ [${pName}] ${attacker.name} は命を懸けて「ギリシア神話」を書き上げた！ 自身の命と引き換えに敵全体へダメージ！`);
   },
 
   "mushi_sekai": function(pName, attacker, target, actorObj, targetObj, activePt) {
     if (targetObj && targetObj.cards) {
       targetObj.cards.forEach(enemy => {
-        if (enemy.hp > 0) {
+        if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
           enemy.activeVal = 0;
         }
       });
@@ -217,10 +239,14 @@ const specialSkillLogic = {
     const isWin = Math.random() < 0.5;
     if (isWin) {
       const dmg = 10;
-      target.hp -= dmg;
-      if (target.hp < 0) target.hp = 0;
-      attacker.atk += 10;
-      addLogMessage(`✊ [${pName}] ${attacker.name} は神の啓示を受け、ジャンケンに勝利！ ${target.name} に ${dmg} の追加ダメージを与え、自身の攻撃力もUPした！`);
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!attacker.type) attacker.type = "西洋";
+        if (!target.type) target.type = "西洋";
+        // 修正: 追加ダメージを executeDamage で安全に処理
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
+      attacker.atk = (attacker.atk || 0) + 10;
+      addLogMessage(`✊ [${pName}] ${attacker.name} は神の啓示を受け、ジャンケンに勝利！ 攻撃力UP＆追加ダメージ！`);
     } else {
       addLogMessage(`✋ [${pName}] ${attacker.name} は神の啓示を受けたが、今回は神を味方につけられなかった...`);
     }
