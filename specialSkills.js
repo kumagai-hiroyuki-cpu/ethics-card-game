@@ -965,7 +965,7 @@ const specialSkillLogic = {
     }
   },
 
-  "kamo_no_mabuchi": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "kamo_no_mabuchi": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const japaneseIds = ["ippen", "ito_jinsai", "ihara_saikaku", "uchimura_kanzo", "kamo_no_mabuchi", "kitamura_tokoku", "kukai", "kotoku_shusui", "kobayashi_hideo", "saicho", "watsuji", "ando_shoeki", "motoori_norinaga"];
     let absorbedAtk = 0;
     const enemyPName = pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1");
@@ -976,9 +976,71 @@ const specialSkillLogic = {
           if (!attacker.type) attacker.type = "和";
           if (!c.type) c.type = "西洋";
           
-          // 修正: executeDamage を使用してHP減少を連動
-          execute
+          // executeDamage で海外思想家へのダメージを連動
+          executeDamage(enemyPName, attacker, c, actorObj, targetObj, 5, true);
+          c.atk = Math.max(0, (c.atk || 0) - 5);
+          absorbedAtk += 5;
+        }
+      });
+    }
 
+    attacker.atk = (attacker.atk || 0) + absorbedAtk;
+    let extraText = "";
+
+    let hasNorinaga = actorObj && actorObj.cards ? actorObj.cards.some(c => c && (c.currentHP ?? c.hp ?? 0) > 0 && c.id === "motoori_norinaga") : false;
+    if (hasNorinaga) {
+      attacker.atk += 5;
+      extraText = " さらに本居宣長と同席のため攻撃力+5！";
+    }
+
+    addLogMessage(`🌸 [${pName}] ${attacker.name} の「国学」！ 海外の思想家から力を吸収（ATK+${absorbedAtk}）！${extraText}`);
+  },
+"kitamura_tokoku": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    const dice = Math.floor(Math.random() * 6) + 1;
+    let resultMsg = "";
+    
+    if (dice === 1) {
+      let aliveEnemies = targetObj && targetObj.cards ? targetObj.cards.filter(c => c && (c.currentHP ?? c.hp ?? 0) > 0) : [];
+      if (aliveEnemies.length > 0) {
+        let targetEnemy = aliveEnemies.reduce((a, b) => (a.currentHP ?? a.hp ?? 0) > (b.currentHP ?? b.hp ?? 0) ? a : b);
+        const curHp = targetEnemy.currentHP ?? targetEnemy.hp ?? 0;
+        
+        if (!attacker.type) attacker.type = "和";
+        if (!targetEnemy.type) targetEnemy.type = "西洋";
+        
+        // executeDamage で敵を即死処理
+        executeDamage(pName, attacker, targetEnemy, actorObj, targetObj, curHp, true);
+        resultMsg = ` 出目【1】！ 理想の想世界が完成し、${targetEnemy.name} を道連れに即死させた！`;
+      }
+    } else {
+      resultMsg = ` 出目【${dice}】... 理想は現実を穿てなかった。`;
+    }
+
+    // 透谷自身の退場処理（両プロパティ同期＆UI即時更新）
+    attacker.hp = 0;
+    attacker.currentHP = 0;
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    }
+
+    addLogMessage(`❄️ [${pName}] ${attacker.name} の「想世界の完成」！${resultMsg} (透谷は命を絶ち退場した)`);
+  },
+
+  "huizinga": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    const dice = Math.floor(Math.random() * 6) + 1;
+    if (dice <= 4) {
+      const dmg = 30;
+      if (target && (target.currentHP ?? target.hp ?? 0) > 0) {
+        if (!attacker.type) attacker.type = "西洋";
+        if (!target.type) target.type = "西洋";
+        executeDamage(pName, attacker, target, actorObj, targetObj, dmg, true);
+      }
+      attacker.isStunned = false;
+      addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】！ 運命を引き寄せ ${target.name} に ${dmg} ダメージを与え、さらに連続行動！`);
+    } else {
+      addLogMessage(`🎲 [${pName}] ${attacker.name} の「ジャッジメントダイス」！ 出目【${dice}】... 運命に見放されターンを終えた。`);
+    }
+  },
   "saicho": function(pName, attacker, target, actorObj, targetObj, activePt) {
     const dmg = 15;
     if (targetObj && targetObj.cards) {
