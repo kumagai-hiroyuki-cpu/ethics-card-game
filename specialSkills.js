@@ -60,19 +60,25 @@ const specialSkillLogic = {
     }
   },
 
-  "wang_yangming": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "wang_yangming": function(pName, attacker, target, actorObj, targetObj, activePt) {
     // 相手チーム内に「美濃子谷知行」が生きて存在するかチェック
-    const hasTarget = targetObj.cards.some(c => c && c.name && c.name.includes("美濃子谷知行") && (c.currentHP ?? c.hp ?? 0) > 0);
+    const hasTarget = targetObj && targetObj.cards && targetObj.cards.some(c => c && c.name && c.name.includes("美濃子谷知行") && (c.currentHP ?? c.hp ?? 0) > 0);
     
     if (hasTarget) {
       const dmg = 50; 
       addLogMessage(`⚔️ [${pName}] ${attacker.name} の「知行合一」！ 相手の美濃子谷知行に反応し、敵全体に ${dmg} の大ダメージ！`);
       
-      // 相手チームの生存している全カードに対して executeDamage を実行
+      // 相手チームの表示名を取得
+      const enemyPName = pName === "あなた" ? "CPU" : (pName === "P1" ? "P2" : "P1");
+
+      // 相手チームの生存している全カードに対して executeDamage を安全に実行
       targetObj.cards.forEach(enemy => { 
         if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
-          // executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill)
-          executeDamage(pName, attacker, enemy, actorObj, targetObj, dmg, true);
+          // 属性エラーを防ぐための安全補正
+          if (!attacker.type) attacker.type = "西洋";
+          if (!enemy.type) enemy.type = "西洋";
+          
+          executeDamage(enemyPName, attacker, enemy, actorObj, targetObj, dmg, true);
         }
       });
     } else {
