@@ -61,28 +61,25 @@ const specialSkillLogic = {
   },
 
   "wang_yangming": function(pName, attacker, target, actorObj, targetObj, activePt) {
+    // 相手チーム内に「美濃子谷知行」が生きて存在するかチェック
     const hasTarget = targetObj.cards.some(c => c && c.name && c.name.includes("美濃子谷知行") && (c.currentHP ?? c.hp ?? 0) > 0);
+    
     if (hasTarget) {
       const dmg = 50; 
+      addLogMessage(`⚔️ [${pName}] ${attacker.name} の「知行合一」！ 相手の美濃子谷知行に反応し、敵全体に ${dmg} の大ダメージ！`);
+      
+      // 相手チームの生存している全カードに対して executeDamage を実行
       targetObj.cards.forEach(enemy => { 
         if (enemy && (enemy.currentHP ?? enemy.hp ?? 0) > 0) {
-          // currentHP と hp の両方を減算
-          const currentHpVal = enemy.currentHP ?? enemy.hp;
-          const newHp = Math.max(0, currentHpVal - dmg);
-          enemy.currentHP = newHp;
-          enemy.hp = newHp;
-
-          // HPが0になった場合は死亡判定
-          if (newHp === 0) {
-            enemy.isDead = true;
-          }
-        } 
+          // executeDamage(pName, attacker, target, actorObj, targetObj, baseDmg, isSkill)
+          executeDamage(pName, attacker, enemy, actorObj, targetObj, dmg, true);
+        }
       });
-      addLogMessage(`⚔️ [${pName}] ${attacker.name} の「知行合一」！ 相手の美濃子谷知行に反応し、敵全体に ${dmg} の大ダメージ！`);
     } else {
       addLogMessage(`[${pName}] ${attacker.name} の「知行合一」！ しかし相手に美濃子谷知行はいないようだ…`);
     }
   },
+
 
 
   "gautama_siddhartha": function(pName, attacker, target, actorObj, targetObj, activePt) {
