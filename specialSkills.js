@@ -381,18 +381,29 @@ const specialSkillLogic = {
     addLogMessage(`🤫 [${pName}]${attacker.name} の「沈黙の命題」！ 語り得ぬものを排除し、敵全体に ${silenceDmg} のHP減少を与えた！`);
   },
 
-  "m_weber": function(pName, attacker, target, actorObj, targetObj, activePt) {
+ "m_weber": function(pName, attacker, target, actorObj, targetObj, activePt) {
     let sacrificedHp = 0;
-    actorObj.cards.forEach(ally => {
-      if (ally.hp > 1) {
-        sacrificedHp += (ally.hp - 1);
-        ally.hp = 1;
-      }
-    });
-    attacker.atk += sacrificedHp;
+    if (actorObj && actorObj.cards) {
+      actorObj.cards.forEach(ally => {
+        if (ally) {
+          const curHp = ally.currentHP ?? ally.hp ?? 0;
+          if (curHp > 1) {
+            sacrificedHp += (curHp - 1);
+            // 味方のHPを極限（1）に固定し、両方のプロパティを同期
+            ally.hp = 1;
+            ally.currentHP = 1;
+          }
+        }
+      });
+    }
+    attacker.atk = (attacker.atk || 0) + sacrificedHp;
     addLogMessage(`💥 [${pName}] ${attacker.name} の「支配者の重撃(ドミネイション・インパクト)」！ 味方全員の命を極限（HP1）まで捧げ、自身の攻撃力が【+${sacrificedHp}】上昇した！！`);
-  },
 
+    // 画面上のHPバーと数値を即座に反映
+    if (typeof updateGameUI === "function") {
+      updateGameUI();
+    }
+  },
  "erasmus": function(pName, attacker, target, actorObj, targetObj, activePt) {
     // 敵・味方両方の陣営を処理
     [actorObj, targetObj].forEach(side => {
